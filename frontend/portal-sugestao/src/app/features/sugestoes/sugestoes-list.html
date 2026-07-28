@@ -1,0 +1,41 @@
+<div class="sugestoes-page">
+  <header>
+    <h1>Ranking de Sugestões</h1>
+    <span>Olá, {{ authService.usuario()?.nome }}</span>
+    <dx-button text="Sair" (onClick)="sair()"></dx-button>
+  </header>
+
+  @if (erro()) {
+    <p class="erro">{{ erro() }}</p>
+  }
+
+  <dx-data-grid [dataSource]="sugestoes()" [showBorders]="true" [columnAutoWidth]="true">
+    <dxi-column dataField="titulo" caption="Título"></dxi-column>
+    <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
+    <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
+    <dxi-column dataField="totalVotos" caption="Votos" [width]="90"></dxi-column>
+    <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date"></dxi-column>
+  </dx-data-grid>
+
+  <section class="nova-sugestao">
+    <h2>Nova sugestão</h2>
+    <div class="campo">
+      <label>Título</label>
+      <dx-text-box [(value)]="novoTitulo"></dx-text-box>
+    </div>
+    <div class="campo">
+      <label>Descrição</label>
+      <dx-text-box [(value)]="novaDescricao"></dx-text-box>
+    </div>
+    <div class="campo">
+      <label>Categoria</label>
+      <dx-select-box
+        [items]="categorias()"
+        displayExpr="nome"
+        valueExpr="id"
+        [(value)]="novaCategoriaId"
+      ></dx-select-box>
+    </div>
+    <dx-button text="Enviar sugestão" type="default" (onClick)="criarSugestao()"></dx-button>
+  </section>
+</div>

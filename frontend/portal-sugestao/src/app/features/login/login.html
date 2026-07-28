@@ -1,0 +1,32 @@
+<div class="login-page">
+  <h1>Portal de Sugestões</h1>
+  <p class="aviso">
+    Login simulado (mock) — o SSO real com o ERP ainda depende de definição técnica (ver PRD).
+  </p>
+
+  <div class="campo">
+    <label>E-mail</label>
+    <dx-text-box [(value)]="email" placeholder="cliente@empresa.com"></dx-text-box>
+  </div>
+
+  <div class="campo">
+    <label>Nome</label>
+    <dx-text-box [(value)]="nome" placeholder="Seu nome"></dx-text-box>
+  </div>
+
+  <div class="campo">
+    <label>Empresa</label>
+    <dx-text-box [(value)]="empresa" placeholder="Nome da empresa"></dx-text-box>
+  </div>
+
+  <div class="campo">
+    <label>Perfil</label>
+    <dx-select-box [(value)]="role" [items]="roles"></dx-select-box>
+  </div>
+
+  @if (erro()) {
+    <p class="erro">{{ erro() }}</p>
+  }
+
+  <dx-button text="Entrar" type="default" [disabled]="carregando()" (onClick)="entrar()"></dx-button>
+</div>

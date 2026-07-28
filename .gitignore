@@ -1,0 +1,21 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+*.user
+.vs/
+
+# Angular / Node
+frontend/**/node_modules/
+frontend/**/dist/
+frontend/**/.angular/
+
+# Ambiente / segredos locais
+*.env
+appsettings.Development.json
+appsettings.*.local.json
+
+# IDE / SO
+.idea/
+.vscode/*
+!.vscode/extensions.json
+Thumbs.db

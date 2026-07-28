@@ -1,0 +1,23 @@
+.login-page {
+  max-width: 360px;
+  margin: 64px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aviso {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.erro {
+  color: #c0392b;
+  font-size: 0.9rem;
+}
