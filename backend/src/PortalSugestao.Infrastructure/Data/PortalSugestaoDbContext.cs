@@ -48,6 +48,11 @@ public class PortalSugestaoDbContext : DbContext
                 .WithMany(u => u.Sugestoes)
                 .HasForeignKey(s => s.AutorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(s => s.Moderador)
+                .WithMany()
+                .HasForeignKey(s => s.ModeradorId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Voto>(entity =>

@@ -2,6 +2,9 @@
   <header>
     <h1>Ranking de Sugestões</h1>
     <span>Olá, {{ authService.usuario()?.nome }}</span>
+    @if (authService.usuario()?.role === 'AdminInterno') {
+      <dx-button text="Moderação" (onClick)="irParaModeracao()"></dx-button>
+    }
     <dx-button text="Sair" (onClick)="sair()"></dx-button>
   </header>
 

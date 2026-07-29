@@ -11,12 +11,19 @@ export interface Sugestao {
   status: StatusSugestao;
   dataCriacao: string;
   totalVotos: number;
+  dataModeracao?: string | null;
+  motivoRejeicao?: string | null;
+  moderadorNome?: string | null;
 }
 
 export interface CreateSugestaoRequest {
   titulo: string;
   descricao: string;
   categoriaId: number;
+}
+
+export interface RejeitarRequest {
+  motivo: string;
 }
 
 export interface Categoria {

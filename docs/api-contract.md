@@ -1,4 +1,4 @@
-# Contrato de API — Fase 0/1
+# Contrato de API — Fase 0/1/2
 
 Endpoints implementados no scaffolding inicial do backend (`backend/src/PortalSugestao.Api`). O contrato completo e sempre atualizado também pode ser consultado via Swagger em `/swagger` com a API rodando.
 
@@ -64,8 +64,36 @@ Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1 do PRD). Req
 }
 ```
 
-## Próximos endpoints (Fases 2–5, ainda não implementados)
-- Moderação: `PUT /api/sugestoes/{id}/aprovar`, `PUT /api/sugestoes/{id}/rejeitar`.
+### `PUT /api/sugestoes/{id}`
+Edita a própria sugestão, permitido apenas enquanto `status` for `EmModeracao` (regra 7.1). Requer ser o autor.
+
+**Request**: mesmo formato do `POST /api/sugestoes`.
+
+**Respostas de erro**: `403` (não é o autor), `404` (não existe), `409` (já foi moderada).
+
+## Moderação
+
+> Requerem role `AdminInterno`.
+
+### `GET /api/sugestoes/pendentes`
+Lista sugestões com `status = EmModeracao`, ordenadas da mais antiga para a mais nova (fila de moderação).
+
+### `PUT /api/sugestoes/{id}/aprovar`
+Aprova a sugestão (`status` → `Publicada`), registra `dataModeracao` e o moderador responsável (auditoria — RNF seção 11).
+
+**Respostas de erro**: `404` (não existe), `409` (já foi moderada).
+
+### `PUT /api/sugestoes/{id}/rejeitar`
+Rejeita a sugestão (`status` → `Rejeitada`), com justificativa.
+
+**Request**
+```json
+{ "motivo": "Duplicada da sugestão #12" }
+```
+
+**Respostas de erro**: `400` (motivo vazio), `404` (não existe), `409` (já foi moderada).
+
+## Próximos endpoints (Fases 3–5, ainda não implementados)
 - Votação: `POST /api/sugestoes/{id}/votos`, `DELETE /api/sugestoes/{id}/votos` (realocação).
 - Comentários: `GET/POST /api/sugestoes/{id}/comentarios`.
 - Notificações: disparo assíncrono de e-mail (sem endpoint HTTP direto).

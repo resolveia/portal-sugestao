@@ -15,6 +15,8 @@ public class Sugestao
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
     public DateTime? DataModeracao { get; set; }
     public string? MotivoRejeicao { get; set; }
+    public int? ModeradorId { get; set; }
+    public Usuario? Moderador { get; set; }
 
     public ICollection<Voto> Votos { get; set; } = new List<Voto>();
     public ICollection<Comentario> Comentarios { get; set; } = new List<Comentario>();

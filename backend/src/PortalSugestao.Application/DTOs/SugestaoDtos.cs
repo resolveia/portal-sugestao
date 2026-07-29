@@ -12,6 +12,11 @@ public record SugestaoDto(
     string AutorNome,
     StatusSugestao Status,
     DateTime DataCriacao,
-    int TotalVotos);
+    int TotalVotos,
+    DateTime? DataModeracao = null,
+    string? MotivoRejeicao = null,
+    string? ModeradorNome = null);
 
 public record CreateSugestaoRequest(string Titulo, string Descricao, int CategoriaId);
+
+public record RejeitarSugestaoRequest(string Motivo);

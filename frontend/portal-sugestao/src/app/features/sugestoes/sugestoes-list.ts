@@ -58,10 +58,14 @@ export class SugestoesList implements OnInit {
           this.novaDescricao = '';
           this.novaCategoriaId = null;
           this.erro.set(null);
-          // Sugestão entra "Em moderação" — só aparece no ranking após aprovação (Fase 2).
+          // Sugestão entra "Em moderação" — só aparece no ranking após aprovação pelo Admin.
         },
         error: () => this.erro.set('Não foi possível criar a sugestão.')
       });
+  }
+
+  irParaModeracao(): void {
+    this.router.navigate(['/moderacao']);
   }
 
   sair(): void {
