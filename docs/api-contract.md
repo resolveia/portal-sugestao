@@ -1,4 +1,4 @@
-# Contrato de API — Fase 0/1/2/3
+# Contrato de API — Fase 0/1/2/3/4
 
 Endpoints implementados no scaffolding inicial do backend (`backend/src/PortalSugestao.Api`). O contrato completo e sempre atualizado também pode ser consultado via Swagger em `/swagger` com a API rodando.
 
@@ -109,6 +109,29 @@ Remove o voto do usuário autenticado nessa sugestão — é assim que se faz a 
 
 > Todas as respostas de `SugestaoDto` (listagem, criação, edição, moderação, voto) incluem `votadoPorMim: bool`, indicando se o usuário autenticado já votou naquela sugestão — o frontend soma esses `true` para saber quantos dos 3 votos já foram usados, sem precisar de outro endpoint.
 
-## Próximos endpoints (Fases 4–5, ainda não implementados)
-- Comentários: `GET/POST /api/sugestoes/{id}/comentarios`.
+## Comentários
+
+> Disponíveis apenas em sugestões **publicadas** (regra 7.3).
+
+### `GET /api/sugestoes/{id}/comentarios`
+Lista a thread de comentários da sugestão, ordenada da mais antiga para a mais nova. Requer autenticação (Cliente ou Admin).
+
+**Respostas de erro**: `404` (sugestão não existe), `409` (sugestão não publicada).
+
+### `POST /api/sugestoes/{id}/comentarios`
+Cria um comentário. Cliente e Admin podem comentar (tabela de permissões, seção 6).
+
+**Request**
+```json
+{ "texto": "Ótima ideia, também preciso disso!" }
+```
+
+**Respostas de erro**: `400` (texto vazio), `404` (não existe), `409` (não publicada).
+
+### `DELETE /api/sugestoes/{id}/comentarios/{comentarioId}`
+Remove um comentário — **moderação reativa, só `AdminInterno`** (tabela de permissões, seção 6).
+
+**Respostas de erro**: `403` (não é Admin), `404` (comentário não existe).
+
+## Próximos endpoints (Fase 5, ainda não implementados)
 - Notificações: disparo assíncrono de e-mail (sem endpoint HTTP direto).

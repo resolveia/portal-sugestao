@@ -1,0 +1,27 @@
+<div class="comentarios">
+  @if (erro()) {
+    <p class="erro">{{ erro() }}</p>
+  }
+
+  @if (comentarios().length === 0) {
+    <p class="vazio">Nenhum comentário ainda.</p>
+  }
+
+  @for (comentario of comentarios(); track comentario.id) {
+    <div class="comentario">
+      <div class="cabecalho">
+        <strong>{{ comentario.autorNome }}</strong>
+        <span class="data">{{ comentario.dataCriacao | date: 'short' }}</span>
+        @if (authService.usuario()?.role === 'AdminInterno') {
+          <dx-button text="Remover" type="danger" [stylingMode]="'text'" (onClick)="remover(comentario.id)"></dx-button>
+        }
+      </div>
+      <p>{{ comentario.texto }}</p>
+    </div>
+  }
+
+  <div class="novo-comentario">
+    <dx-text-box [(value)]="novoTexto" placeholder="Escreva um comentário..."></dx-text-box>
+    <dx-button text="Comentar" type="default" (onClick)="comentar()"></dx-button>
+  </div>
+</div>

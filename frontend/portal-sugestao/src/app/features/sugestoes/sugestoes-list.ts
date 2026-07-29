@@ -5,13 +5,14 @@ import { AuthService } from '../../core/auth/auth.service';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
 import { Categoria, Sugestao } from '../../core/models/sugestao.model';
 import { Router } from '@angular/router';
+import { Comentarios } from './comentarios/comentarios';
 
 const LIMITE_VOTOS = 3;
 
 @Component({
   selector: 'app-sugestoes-list',
   standalone: true,
-  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule],
+  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule, Comentarios],
   templateUrl: './sugestoes-list.html',
   styleUrl: './sugestoes-list.scss'
 })

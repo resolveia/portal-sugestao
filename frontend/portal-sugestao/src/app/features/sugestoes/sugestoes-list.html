@@ -15,7 +15,12 @@
     <p class="erro">{{ erro() }}</p>
   }
 
-  <dx-data-grid [dataSource]="sugestoes()" [showBorders]="true" [columnAutoWidth]="true">
+  <dx-data-grid
+    [dataSource]="sugestoes()"
+    [showBorders]="true"
+    [columnAutoWidth]="true"
+    [masterDetail]="{ enabled: true, template: 'comentariosTemplate' }"
+  >
     <dxi-column dataField="titulo" caption="Título"></dxi-column>
     <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
     <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
@@ -36,6 +41,10 @@
           (onClick)="votar(row.data.id)"
         ></dx-button>
       }
+    </div>
+
+    <div *dxTemplate="let info of 'comentariosTemplate'">
+      <app-comentarios [sugestaoId]="info.data.id"></app-comentarios>
     </div>
   </dx-data-grid>
 
