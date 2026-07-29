@@ -1,5 +1,7 @@
 # Portal de Sugestões do ERP
 
+[![CI](https://github.com/resolveia/portal-sugestao/actions/workflows/ci.yml/badge.svg)](https://github.com/resolveia/portal-sugestao/actions/workflows/ci.yml)
+
 Ver `PRD.md` para visão de produto, escopo e fases de construção (seção 14).
 
 ## Estrutura do repositório
