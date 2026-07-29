@@ -71,6 +71,15 @@ curl -X POST https://localhost:<porta>/api/auth/mock-login \
 
 Use o `token` retornado no header `Authorization: Bearer <token>` para chamar os demais endpoints (ver `docs/api-contract.md`).
 
+### Testes automatizados
+
+```bash
+cd backend
+dotnet test
+```
+
+Os testes de integração (`tests/PortalSugestao.Tests`) sobem a API real em memória (`WebApplicationFactory`) com um banco EF Core InMemory — **não precisam do Docker rodando** (nem SQL Server, nem MailHog).
+
 ## Frontend
 
 ```bash
@@ -83,4 +92,4 @@ A aplicação sobe em `http://localhost:4200` e espera a API em `environment.ts`
 
 ## Fases do projeto
 
-O progresso de construção segue as fases descritas no `PRD.md` (seção 14). Concluídas até aqui: **Fase 0** (definições e preparação), **Fase 1** (autenticação mock + cadastro base), **Fase 2** (moderação), **Fase 3** (votação e ranking), **Fase 4** (comentários) e **Fase 5** (notificações por e-mail).
+O progresso de construção segue as fases descritas no `PRD.md` (seção 14). Concluídas até aqui: **Fase 0** (definições e preparação), **Fase 1** (autenticação mock + cadastro base), **Fase 2** (moderação), **Fase 3** (votação e ranking), **Fase 4** (comentários), **Fase 5** (notificações por e-mail) e parte da **Fase 7** (testes automatizados de backend).

@@ -88,7 +88,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Testes de integração usam o ambiente "Testing" e não têm um endpoint HTTPS real —
+// UseHttpsRedirection causaria um 307 para um host que não existe no TestServer.
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(CorsPolicy);
 
@@ -98,3 +103,9 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// Marcador necessário para o <c>WebApplicationFactory&lt;Program&gt;</c> nos testes de integração
+/// conseguir referenciar esta classe gerada implicitamente pelos top-level statements.
+/// </summary>
+public partial class Program { }
