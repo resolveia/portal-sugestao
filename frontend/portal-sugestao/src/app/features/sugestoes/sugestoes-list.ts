@@ -1,15 +1,17 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { DxDataGridModule } from 'devextreme-angular';
+import { Component, OnInit, computed, signal } from '@angular/core';
+import { DxDataGridModule, DxTemplateModule } from 'devextreme-angular';
 import { DxTextBoxModule, DxSelectBoxModule, DxButtonModule } from 'devextreme-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
 import { Categoria, Sugestao } from '../../core/models/sugestao.model';
 import { Router } from '@angular/router';
 
+const LIMITE_VOTOS = 3;
+
 @Component({
   selector: 'app-sugestoes-list',
   standalone: true,
-  imports: [DxDataGridModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule],
+  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule],
   templateUrl: './sugestoes-list.html',
   styleUrl: './sugestoes-list.scss'
 })
@@ -17,6 +19,10 @@ export class SugestoesList implements OnInit {
   readonly sugestoes = signal<Sugestao[]>([]);
   readonly categorias = signal<Categoria[]>([]);
   readonly erro = signal<string | null>(null);
+
+  readonly limiteVotos = LIMITE_VOTOS;
+  readonly votosUsados = computed(() => this.sugestoes().filter((s) => s.votadoPorMim).length);
+  readonly votosDisponiveis = computed(() => this.limiteVotos - this.votosUsados());
 
   novoTitulo = '';
   novaDescricao = '';
@@ -62,6 +68,26 @@ export class SugestoesList implements OnInit {
         },
         error: () => this.erro.set('Não foi possível criar a sugestão.')
       });
+  }
+
+  votar(id: number): void {
+    this.sugestoesService.votar(id).subscribe({
+      next: () => {
+        this.erro.set(null);
+        this.carregar();
+      },
+      error: () => this.erro.set('Não foi possível registrar o voto.')
+    });
+  }
+
+  removerVoto(id: number): void {
+    this.sugestoesService.removerVoto(id).subscribe({
+      next: () => {
+        this.erro.set(null);
+        this.carregar();
+      },
+      error: () => this.erro.set('Não foi possível remover o voto.')
+    });
   }
 
   irParaModeracao(): void {

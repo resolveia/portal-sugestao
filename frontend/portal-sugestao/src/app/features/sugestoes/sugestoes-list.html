@@ -2,6 +2,9 @@
   <header>
     <h1>Ranking de Sugestões</h1>
     <span>Olá, {{ authService.usuario()?.nome }}</span>
+    @if (authService.usuario()?.role === 'Cliente') {
+      <span class="votos-disponiveis">Você tem {{ votosDisponiveis() }} de {{ limiteVotos }} votos disponíveis</span>
+    }
     @if (authService.usuario()?.role === 'AdminInterno') {
       <dx-button text="Moderação" (onClick)="irParaModeracao()"></dx-button>
     }
@@ -18,6 +21,22 @@
     <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
     <dxi-column dataField="totalVotos" caption="Votos" [width]="90"></dxi-column>
     <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date"></dxi-column>
+    @if (authService.usuario()?.role === 'Cliente') {
+      <dxi-column caption="Ação" cellTemplate="votoTemplate" [width]="160"></dxi-column>
+    }
+
+    <div *dxTemplate="let row of 'votoTemplate'">
+      @if (row.data.votadoPorMim) {
+        <dx-button text="Remover voto" type="danger" (onClick)="removerVoto(row.data.id)"></dx-button>
+      } @else {
+        <dx-button
+          text="Votar"
+          type="default"
+          [disabled]="votosDisponiveis() === 0"
+          (onClick)="votar(row.data.id)"
+        ></dx-button>
+      }
+    </div>
   </dx-data-grid>
 
   <section class="nova-sugestao">

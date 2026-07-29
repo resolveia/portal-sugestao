@@ -13,6 +13,7 @@ public record SugestaoDto(
     StatusSugestao Status,
     DateTime DataCriacao,
     int TotalVotos,
+    bool VotadoPorMim,
     DateTime? DataModeracao = null,
     string? MotivoRejeicao = null,
     string? ModeradorNome = null);

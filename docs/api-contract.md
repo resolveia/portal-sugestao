@@ -1,4 +1,4 @@
-# Contrato de API — Fase 0/1/2
+# Contrato de API — Fase 0/1/2/3
 
 Endpoints implementados no scaffolding inicial do backend (`backend/src/PortalSugestao.Api`). O contrato completo e sempre atualizado também pode ser consultado via Swagger em `/swagger` com a API rodando.
 
@@ -93,7 +93,22 @@ Rejeita a sugestão (`status` → `Rejeitada`), com justificativa.
 
 **Respostas de erro**: `400` (motivo vazio), `404` (não existe), `409` (já foi moderada).
 
-## Próximos endpoints (Fases 3–5, ainda não implementados)
-- Votação: `POST /api/sugestoes/{id}/votos`, `DELETE /api/sugestoes/{id}/votos` (realocação).
+## Votação
+
+> Requerem role `Cliente` (Admin interno não vota — PRD seção 6).
+
+### `POST /api/sugestoes/{id}/votos`
+Vota na sugestão (deve estar `Publicada`). Limite de **3 votos ativos simultâneos** por cliente, um voto por sugestão (regra 7.2).
+
+**Respostas de erro**: `404` (não existe), `409` (não publicada / já votou nela / limite de 3 votos atingido).
+
+### `DELETE /api/sugestoes/{id}/votos`
+Remove o voto do usuário autenticado nessa sugestão — é assim que se faz a **realocação**: remover de uma e depois `POST` em outra.
+
+**Respostas de erro**: `404` (sugestão não existe, ou usuário não tinha voto nela).
+
+> Todas as respostas de `SugestaoDto` (listagem, criação, edição, moderação, voto) incluem `votadoPorMim: bool`, indicando se o usuário autenticado já votou naquela sugestão — o frontend soma esses `true` para saber quantos dos 3 votos já foram usados, sem precisar de outro endpoint.
+
+## Próximos endpoints (Fases 4–5, ainda não implementados)
 - Comentários: `GET/POST /api/sugestoes/{id}/comentarios`.
 - Notificações: disparo assíncrono de e-mail (sem endpoint HTTP direto).

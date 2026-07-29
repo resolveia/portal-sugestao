@@ -33,6 +33,14 @@ export class SugestoesService {
     return this.http.put<Sugestao>(`${environment.apiUrl}/sugestoes/${id}/rejeitar`, request);
   }
 
+  votar(id: number): Observable<Sugestao> {
+    return this.http.post<Sugestao>(`${environment.apiUrl}/sugestoes/${id}/votos`, {});
+  }
+
+  removerVoto(id: number): Observable<Sugestao> {
+    return this.http.delete<Sugestao>(`${environment.apiUrl}/sugestoes/${id}/votos`);
+  }
+
   listarCategorias(): Observable<Categoria[]> {
     return this.http.get<Categoria[]>(`${environment.apiUrl}/categorias`);
   }

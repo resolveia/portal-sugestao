@@ -14,6 +14,8 @@ namespace PortalSugestao.Api.Controllers;
 [Authorize]
 public class SugestoesController : ControllerBase
 {
+    private const int LimiteVotosPorUsuario = 3;
+
     private readonly PortalSugestaoDbContext _db;
 
     public SugestoesController(PortalSugestaoDbContext db)
@@ -27,6 +29,8 @@ public class SugestoesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SugestaoDto>>> Listar()
     {
+        var currentUserId = CurrentUserId();
+
         var sugestoes = await _db.Sugestoes
             .Where(s => s.Status == StatusSugestao.Publicada)
             .Include(s => s.Categoria)
@@ -35,7 +39,7 @@ public class SugestoesController : ControllerBase
             .OrderByDescending(s => s.Votos.Count)
             .ToListAsync();
 
-        return Ok(sugestoes.Select(ToDto));
+        return Ok(sugestoes.Select(s => ToDto(s, currentUserId)));
     }
 
     /// <summary>
@@ -45,6 +49,8 @@ public class SugestoesController : ControllerBase
     [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
     public async Task<ActionResult<IEnumerable<SugestaoDto>>> Pendentes()
     {
+        var currentUserId = CurrentUserId();
+
         var sugestoes = await _db.Sugestoes
             .Where(s => s.Status == StatusSugestao.EmModeracao)
             .Include(s => s.Categoria)
@@ -53,7 +59,7 @@ public class SugestoesController : ControllerBase
             .OrderBy(s => s.DataCriacao)
             .ToListAsync();
 
-        return Ok(sugestoes.Select(ToDto));
+        return Ok(sugestoes.Select(s => ToDto(s, currentUserId)));
     }
 
     /// <summary>
@@ -89,7 +95,7 @@ public class SugestoesController : ControllerBase
         sugestao.Categoria = categoria;
         sugestao.Autor = autor;
 
-        return CreatedAtAction(nameof(Listar), ToDto(sugestao));
+        return CreatedAtAction(nameof(Listar), ToDto(sugestao, autor.Id));
     }
 
     /// <summary>
@@ -98,6 +104,8 @@ public class SugestoesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<SugestaoDto>> Editar(int id, CreateSugestaoRequest request)
     {
+        var currentUserId = CurrentUserId();
+
         var sugestao = await _db.Sugestoes
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
@@ -109,7 +117,7 @@ public class SugestoesController : ControllerBase
             return NotFound();
         }
 
-        if (sugestao.AutorId != CurrentUserId())
+        if (sugestao.AutorId != currentUserId)
         {
             return Forbid();
         }
@@ -132,7 +140,7 @@ public class SugestoesController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        return Ok(ToDto(sugestao));
+        return Ok(ToDto(sugestao, currentUserId));
     }
 
     /// <summary>
@@ -142,6 +150,8 @@ public class SugestoesController : ControllerBase
     [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
     public async Task<ActionResult<SugestaoDto>> Aprovar(int id)
     {
+        var currentUserId = CurrentUserId();
+
         var sugestao = await _db.Sugestoes
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
@@ -160,12 +170,12 @@ public class SugestoesController : ControllerBase
 
         sugestao.Status = StatusSugestao.Publicada;
         sugestao.DataModeracao = DateTime.UtcNow;
-        sugestao.ModeradorId = CurrentUserId();
+        sugestao.ModeradorId = currentUserId;
 
         await _db.SaveChangesAsync();
 
         sugestao.Moderador = await _db.Usuarios.FindAsync(sugestao.ModeradorId);
-        return Ok(ToDto(sugestao));
+        return Ok(ToDto(sugestao, currentUserId));
     }
 
     /// <summary>
@@ -179,6 +189,8 @@ public class SugestoesController : ControllerBase
         {
             return BadRequest("Motivo é obrigatório.");
         }
+
+        var currentUserId = CurrentUserId();
 
         var sugestao = await _db.Sugestoes
             .Include(s => s.Categoria)
@@ -199,17 +211,92 @@ public class SugestoesController : ControllerBase
         sugestao.Status = StatusSugestao.Rejeitada;
         sugestao.DataModeracao = DateTime.UtcNow;
         sugestao.MotivoRejeicao = request.Motivo;
-        sugestao.ModeradorId = CurrentUserId();
+        sugestao.ModeradorId = currentUserId;
 
         await _db.SaveChangesAsync();
 
         sugestao.Moderador = await _db.Usuarios.FindAsync(sugestao.ModeradorId);
-        return Ok(ToDto(sugestao));
+        return Ok(ToDto(sugestao, currentUserId));
+    }
+
+    /// <summary>
+    /// Vota em uma sugestão publicada. Limite de 3 votos ativos por cliente, um voto por sugestão (regra 7.2 do PRD).
+    /// </summary>
+    [HttpPost("{id}/votos")]
+    [Authorize(Roles = nameof(RoleUsuario.Cliente))]
+    public async Task<ActionResult<SugestaoDto>> Votar(int id)
+    {
+        var currentUserId = CurrentUserId();
+
+        var sugestao = await _db.Sugestoes
+            .Include(s => s.Categoria)
+            .Include(s => s.Autor)
+            .Include(s => s.Votos)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (sugestao is null)
+        {
+            return NotFound();
+        }
+
+        if (sugestao.Status != StatusSugestao.Publicada)
+        {
+            return Conflict("Só é possível votar em sugestões publicadas.");
+        }
+
+        if (sugestao.Votos.Any(v => v.UsuarioId == currentUserId))
+        {
+            return Conflict("Você já votou nesta sugestão.");
+        }
+
+        var votosAtivos = await _db.Votos.CountAsync(v => v.UsuarioId == currentUserId);
+        if (votosAtivos >= LimiteVotosPorUsuario)
+        {
+            return Conflict($"Limite de {LimiteVotosPorUsuario} votos ativos atingido. Remova um voto para votar em outra sugestão.");
+        }
+
+        sugestao.Votos.Add(new Voto { SugestaoId = sugestao.Id, UsuarioId = currentUserId });
+        await _db.SaveChangesAsync();
+
+        return Ok(ToDto(sugestao, currentUserId));
+    }
+
+    /// <summary>
+    /// Remove o voto do usuário autenticado nesta sugestão — usado para realocar o voto para outra (regra 7.2 do PRD).
+    /// </summary>
+    [HttpDelete("{id}/votos")]
+    [Authorize(Roles = nameof(RoleUsuario.Cliente))]
+    public async Task<ActionResult<SugestaoDto>> RemoverVoto(int id)
+    {
+        var currentUserId = CurrentUserId();
+
+        var sugestao = await _db.Sugestoes
+            .Include(s => s.Categoria)
+            .Include(s => s.Autor)
+            .Include(s => s.Votos)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (sugestao is null)
+        {
+            return NotFound();
+        }
+
+        var voto = sugestao.Votos.FirstOrDefault(v => v.UsuarioId == currentUserId);
+        if (voto is null)
+        {
+            return NotFound("Você não tem voto nesta sugestão.");
+        }
+
+        sugestao.Votos.Remove(voto);
+        _db.Votos.Remove(voto);
+        await _db.SaveChangesAsync();
+
+        return Ok(ToDto(sugestao, currentUserId));
     }
 
     private int CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    private static SugestaoDto ToDto(Sugestao s) => new(
+    private static SugestaoDto ToDto(Sugestao s, int currentUserId) => new(
         s.Id,
         s.Titulo,
         s.Descricao,
@@ -220,6 +307,7 @@ public class SugestoesController : ControllerBase
         s.Status,
         s.DataCriacao,
         s.Votos.Count,
+        s.Votos.Any(v => v.UsuarioId == currentUserId),
         s.DataModeracao,
         s.MotivoRejeicao,
         s.Moderador?.Nome);

@@ -11,6 +11,7 @@ export interface Sugestao {
   status: StatusSugestao;
   dataCriacao: string;
   totalVotos: number;
+  votadoPorMim: boolean;
   dataModeracao?: string | null;
   motivoRejeicao?: string | null;
   moderadorNome?: string | null;
