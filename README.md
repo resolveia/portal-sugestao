@@ -90,6 +90,15 @@ npm start
 
 A aplicação sobe em `http://localhost:4200` e espera a API em `environment.ts` (`apiUrl`).
 
+### Testes automatizados
+
+```bash
+cd frontend/portal-sugestao
+npm test
+```
+
+Cobre `AuthService`, os guards de rota (`authGuard`/`adminGuard`), o interceptor de JWT e os serviços HTTP (`SugestoesService`/`ComentariosService`), usando `HttpTestingController` — **não precisa da API/Docker rodando**.
+
 ## Fases do projeto
 
-O progresso de construção segue as fases descritas no `PRD.md` (seção 14). Concluídas até aqui: **Fase 0** (definições e preparação), **Fase 1** (autenticação mock + cadastro base), **Fase 2** (moderação), **Fase 3** (votação e ranking), **Fase 4** (comentários), **Fase 5** (notificações por e-mail) e parte da **Fase 7** (testes automatizados de backend).
+O progresso de construção segue as fases descritas no `PRD.md` (seção 14). Concluídas até aqui: **Fase 0** (definições e preparação), **Fase 1** (autenticação mock + cadastro base), **Fase 2** (moderação), **Fase 3** (votação e ranking), **Fase 4** (comentários), **Fase 5** (notificações por e-mail) e parte da **Fase 7** (testes automatizados de backend e frontend).
