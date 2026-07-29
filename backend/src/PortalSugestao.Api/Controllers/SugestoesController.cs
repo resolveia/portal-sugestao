@@ -29,8 +29,7 @@ public class SugestoesController : ControllerBase
     {
         var sugestoes = await _db.Sugestoes
             .Where(s => s.Status == StatusSugestao.Publicada)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
+            .OrderByDescending(s => s.Votos.Count)
             .Select(s => new SugestaoDto(
                 s.Id,
                 s.Titulo,
@@ -42,7 +41,6 @@ public class SugestoesController : ControllerBase
                 s.Status,
                 s.DataCriacao,
                 s.Votos.Count))
-            .OrderByDescending(s => s.TotalVotos)
             .ToListAsync();
 
         return Ok(sugestoes);
