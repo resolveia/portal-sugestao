@@ -6,6 +6,7 @@ using PortalSugestao.Application.DTOs;
 using PortalSugestao.Domain.Entities;
 using PortalSugestao.Domain.Enums;
 using PortalSugestao.Infrastructure.Data;
+using PortalSugestao.Infrastructure.Notificacoes;
 
 namespace PortalSugestao.Api.Controllers;
 
@@ -17,10 +18,12 @@ public class SugestoesController : ControllerBase
     private const int LimiteVotosPorUsuario = 3;
 
     private readonly PortalSugestaoDbContext _db;
+    private readonly NotificacaoService _notificacaoService;
 
-    public SugestoesController(PortalSugestaoDbContext db)
+    public SugestoesController(PortalSugestaoDbContext db, NotificacaoService notificacaoService)
     {
         _db = db;
+        _notificacaoService = notificacaoService;
     }
 
     /// <summary>
@@ -175,6 +178,8 @@ public class SugestoesController : ControllerBase
         await _db.SaveChangesAsync();
 
         sugestao.Moderador = await _db.Usuarios.FindAsync(sugestao.ModeradorId);
+        await _notificacaoService.NotificarAsync(sugestao.Autor!, TipoNotificacao.SugestaoAprovada, sugestao);
+
         return Ok(ToDto(sugestao, currentUserId));
     }
 
@@ -216,6 +221,8 @@ public class SugestoesController : ControllerBase
         await _db.SaveChangesAsync();
 
         sugestao.Moderador = await _db.Usuarios.FindAsync(sugestao.ModeradorId);
+        await _notificacaoService.NotificarAsync(sugestao.Autor!, TipoNotificacao.SugestaoRejeitada, sugestao);
+
         return Ok(ToDto(sugestao, currentUserId));
     }
 

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PortalSugestao.Api.Auth;
 using PortalSugestao.Infrastructure.Data;
+using PortalSugestao.Infrastructure.Notificacoes;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,9 @@ builder.Services.AddDbContext<PortalSugestaoDbContext>(options =>
 
 builder.Services.Configure<MockAuthOptions>(builder.Configuration.GetSection(MockAuthOptions.SectionName));
 builder.Services.AddScoped<MockTokenService>();
+
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
+builder.Services.AddScoped<NotificacaoService>();
 
 var mockAuthOptions = builder.Configuration.GetSection(MockAuthOptions.SectionName).Get<MockAuthOptions>()
     ?? throw new InvalidOperationException("Seção 'MockAuth' não configurada em appsettings.");

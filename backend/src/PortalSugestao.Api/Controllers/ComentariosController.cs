@@ -6,6 +6,7 @@ using PortalSugestao.Application.DTOs;
 using PortalSugestao.Domain.Entities;
 using PortalSugestao.Domain.Enums;
 using PortalSugestao.Infrastructure.Data;
+using PortalSugestao.Infrastructure.Notificacoes;
 
 namespace PortalSugestao.Api.Controllers;
 
@@ -15,10 +16,12 @@ namespace PortalSugestao.Api.Controllers;
 public class ComentariosController : ControllerBase
 {
     private readonly PortalSugestaoDbContext _db;
+    private readonly NotificacaoService _notificacaoService;
 
-    public ComentariosController(PortalSugestaoDbContext db)
+    public ComentariosController(PortalSugestaoDbContext db, NotificacaoService notificacaoService)
     {
         _db = db;
+        _notificacaoService = notificacaoService;
     }
 
     /// <summary>
@@ -86,6 +89,17 @@ public class ComentariosController : ControllerBase
 
         _db.Comentarios.Add(comentario);
         await _db.SaveChangesAsync();
+
+        // Notifica o autor da sugestão só quando quem responde é o Admin — evita notificar
+        // por comentários de outros clientes (PRD, ponto em aberto #3).
+        if (autor.Role == RoleUsuario.AdminInterno && sugestao.AutorId != currentUserId)
+        {
+            var autorSugestao = await _db.Usuarios.FindAsync(sugestao.AutorId);
+            if (autorSugestao is not null)
+            {
+                await _notificacaoService.NotificarAsync(autorSugestao, TipoNotificacao.NovoComentario, sugestao);
+            }
+        }
 
         var dto = new ComentarioDto(comentario.Id, sugestaoId, currentUserId, autor.Nome, comentario.Texto, comentario.DataCriacao);
         return CreatedAtAction(nameof(Listar), new { sugestaoId }, dto);

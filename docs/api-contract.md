@@ -133,5 +133,14 @@ Remove um comentário — **moderação reativa, só `AdminInterno`** (tabela de
 
 **Respostas de erro**: `403` (não é Admin), `404` (comentário não existe).
 
-## Próximos endpoints (Fase 5, ainda não implementados)
-- Notificações: disparo assíncrono de e-mail (sem endpoint HTTP direto).
+## Notificações
+
+Não são endpoints HTTP — são **efeitos colaterais** de ações já existentes (regra 7.5 do PRD). O autor da sugestão recebe um e-mail quando:
+
+- a sugestão é **aprovada** (`PUT /api/sugestoes/{id}/aprovar`);
+- a sugestão é **rejeitada** (`PUT /api/sugestoes/{id}/rejeitar`), com o motivo no corpo do e-mail;
+- **o Admin** comenta na sugestão (`POST /api/sugestoes/{id}/comentarios`) — comentários de outros clientes **não** geram e-mail, para evitar excesso de notificações (PRD, ponto em aberto #3).
+
+Cada envio também é registrado em `NotificacaoLog` (auditoria). Se o envio de e-mail falhar (ex.: SMTP fora do ar), a ação principal (aprovar/rejeitar/comentar) **continua funcionando normalmente** — a falha só é logada.
+
+Em desenvolvimento, os e-mails vão para um SMTP de teste local (MailHog, subido via `docker-compose.yml`). Veja os e-mails recebidos em `http://localhost:8025`.

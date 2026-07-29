@@ -10,5 +10,12 @@ services:
     volumes:
       - portal-sugestao-sqldata:/var/opt/mssql
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: portal-sugestao-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # UI web (http://localhost:8025)
+
 volumes:
   portal-sugestao-sqldata:

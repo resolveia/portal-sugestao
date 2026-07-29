@@ -19,7 +19,7 @@ docs/       Documentação de apoio (contrato de API, etc.)
 ## Backend
 
 ```bash
-# subir SQL Server local (requer Docker)
+# subir SQL Server + MailHog (SMTP de teste) local, requer Docker
 docker compose up -d
 
 cd backend
@@ -42,11 +42,22 @@ A connection string e a chave de assinatura do JWT mock ficam em `appsettings.De
     "Issuer": "PortalSugestao.MockSso",
     "Audience": "PortalSugestao.Api",
     "TokenExpirationMinutes": 480
+  },
+  "Smtp": {
+    "Host": "127.0.0.1",
+    "Port": 1025,
+    "From": "portal-sugestao@local.test"
   }
 }
 ```
 
 > A senha do `MSSQL_SA_PASSWORD` no `docker-compose.yml` deve ser a mesma usada na connection string acima.
+
+> Use `127.0.0.1` (não `localhost`) no `Smtp:Host` — em alguns ambientes Windows a resolução de `localhost` tenta IPv6 primeiro e o MailHog (via port-forward do Docker Desktop) só responde em IPv4, causando timeouts intermitentes no envio.
+
+### Notificações por e-mail (MailHog)
+
+E-mails de aprovação/rejeição/comentário do Admin (regra 7.5 do PRD) são enviados para um SMTP de teste local — nada sai para a internet. Veja os e-mails recebidos em `http://localhost:8025` (sobe junto com `docker compose up -d`).
 
 ### Autenticação (mock)
 
@@ -72,4 +83,4 @@ A aplicação sobe em `http://localhost:4200` e espera a API em `environment.ts`
 
 ## Fases do projeto
 
-O progresso de construção segue as fases descritas no `PRD.md` (seção 14). Este scaffolding inicial cobre a **Fase 0** (definições e preparação) e o início da **Fase 1** (autenticação mock + cadastro base de sugestões/categorias).
+O progresso de construção segue as fases descritas no `PRD.md` (seção 14). Concluídas até aqui: **Fase 0** (definições e preparação), **Fase 1** (autenticação mock + cadastro base), **Fase 2** (moderação), **Fase 3** (votação e ranking), **Fase 4** (comentários) e **Fase 5** (notificações por e-mail).
