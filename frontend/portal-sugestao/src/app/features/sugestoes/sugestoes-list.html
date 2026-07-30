@@ -6,6 +6,7 @@
       <span class="votos-disponiveis">Você tem {{ votosDisponiveis() }} de {{ limiteVotos }} votos disponíveis</span>
     }
     @if (authService.usuario()?.role === 'AdminInterno') {
+      <dx-button text="Categorias" (onClick)="irParaCategorias()"></dx-button>
       <dx-button text="Moderação" (onClick)="irParaModeracao()"></dx-button>
     }
     <dx-button text="Sair" (onClick)="sair()"></dx-button>
@@ -25,7 +26,7 @@
     <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
     <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
     <dxi-column dataField="totalVotos" caption="Votos" [width]="90"></dxi-column>
-    <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date"></dxi-column>
+    <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date" [format]="'dd/MM/yyyy'"></dxi-column>
     @if (authService.usuario()?.role === 'Cliente') {
       <dxi-column caption="Ação" cellTemplate="votoTemplate" [width]="160"></dxi-column>
     }

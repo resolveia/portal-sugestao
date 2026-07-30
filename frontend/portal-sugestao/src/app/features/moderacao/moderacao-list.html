@@ -13,7 +13,7 @@
     <dxi-column dataField="descricao" caption="Descrição"></dxi-column>
     <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
     <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
-    <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date"></dxi-column>
+    <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date" [format]="'dd/MM/yyyy'"></dxi-column>
     <dxi-column caption="Ações" cellTemplate="acoesTemplate" [width]="280"></dxi-column>
 
     <div *dxTemplate="let row of 'acoesTemplate'">

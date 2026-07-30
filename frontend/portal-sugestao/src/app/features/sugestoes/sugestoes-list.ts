@@ -95,6 +95,10 @@ export class SugestoesList implements OnInit {
     this.router.navigate(['/moderacao']);
   }
 
+  irParaCategorias(): void {
+    this.router.navigate(['/categorias']);
+  }
+
   sair(): void {
     this.authService.logout();
     this.router.navigate(['/login']);

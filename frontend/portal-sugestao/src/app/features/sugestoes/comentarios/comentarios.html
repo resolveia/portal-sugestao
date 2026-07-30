@@ -11,7 +11,7 @@
     <div class="comentario">
       <div class="cabecalho">
         <strong>{{ comentario.autorNome }}</strong>
-        <span class="data">{{ comentario.dataCriacao | date: 'short' }}</span>
+        <span class="data">{{ comentario.dataCriacao | date: 'dd/MM/yyyy HH:mm' }}</span>
         @if (authService.usuario()?.role === 'AdminInterno') {
           <dx-button text="Remover" type="danger" [stylingMode]="'text'" (onClick)="remover(comentario.id)"></dx-button>
         }

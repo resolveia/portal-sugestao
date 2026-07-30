@@ -44,4 +44,8 @@ export class SugestoesService {
   listarCategorias(): Observable<Categoria[]> {
     return this.http.get<Categoria[]>(`${environment.apiUrl}/categorias`);
   }
+
+  criarCategoria(nome: string): Observable<Categoria> {
+    return this.http.post<Categoria>(`${environment.apiUrl}/categorias`, { nome });
+  }
 }

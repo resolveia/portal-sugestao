@@ -17,5 +17,10 @@ export const routes: Routes = [
     path: 'moderacao',
     canActivate: [authGuard, adminGuard],
     loadComponent: () => import('./features/moderacao/moderacao-list').then((m) => m.ModeracaoList)
+  },
+  {
+    path: 'categorias',
+    canActivate: [authGuard, adminGuard],
+    loadComponent: () => import('./features/categorias/categorias-list').then((m) => m.CategoriasList)
   }
 ];
