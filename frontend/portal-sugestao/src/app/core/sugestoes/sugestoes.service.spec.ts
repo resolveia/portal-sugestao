@@ -33,7 +33,7 @@ describe('SugestoesService', () => {
   });
 
   it('criar() faz POST em /sugestoes com o corpo certo', () => {
-    const request = { titulo: 'T', descricao: 'D', categoriaId: 1 };
+    const request = { titulo: 'T', descricao: 'D', resultadoEsperado: 'R', categoriaId: 1 };
     service.criar(request).subscribe();
     const req = httpMock.expectOne(`${environment.apiUrl}/sugestoes`);
     expect(req.request.method).toBe('POST');
@@ -42,7 +42,7 @@ describe('SugestoesService', () => {
   });
 
   it('editar() faz PUT em /sugestoes/{id}', () => {
-    const request = { titulo: 'T', descricao: 'D', categoriaId: 1 };
+    const request = { titulo: 'T', descricao: 'D', resultadoEsperado: 'R', categoriaId: 1 };
     service.editar(5, request).subscribe();
     const req = httpMock.expectOne(`${environment.apiUrl}/sugestoes/5`);
     expect(req.request.method).toBe('PUT');
@@ -84,5 +84,35 @@ describe('SugestoesService', () => {
     const req = httpMock.expectOne(`${environment.apiUrl}/categorias`);
     expect(req.request.method).toBe('GET');
     req.flush([]);
+  });
+
+  it('listarTodasCategorias() faz GET em /categorias/todas', () => {
+    service.listarTodasCategorias().subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/categorias/todas`);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('criarCategoria() faz POST em /categorias com o nome', () => {
+    service.criarCategoria('Financeiro').subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/categorias`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ nome: 'Financeiro' });
+    req.flush({});
+  });
+
+  it('editarCategoria() faz PUT em /categorias/{id} com o nome', () => {
+    service.editarCategoria(5, 'Novo nome').subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/categorias/5`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ nome: 'Novo nome' });
+    req.flush({});
+  });
+
+  it('removerCategoria() faz DELETE em /categorias/{id}', () => {
+    service.removerCategoria(5).subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/categorias/5`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({});
   });
 });

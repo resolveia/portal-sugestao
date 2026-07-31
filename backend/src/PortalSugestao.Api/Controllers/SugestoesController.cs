@@ -71,6 +71,11 @@ public class SugestoesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<SugestaoDto>> Criar(CreateSugestaoRequest request)
     {
+        if (!CamposObrigatoriosValidos(request.Titulo, request.Descricao, request.ResultadoEsperado))
+        {
+            return BadRequest("Título, descrição e resultado esperado são obrigatórios.");
+        }
+
         var categoria = await _db.Categorias.FindAsync(request.CategoriaId);
         if (categoria is null)
         {
@@ -87,6 +92,7 @@ public class SugestoesController : ControllerBase
         {
             Titulo = request.Titulo,
             Descricao = request.Descricao,
+            ResultadoEsperado = request.ResultadoEsperado,
             CategoriaId = request.CategoriaId,
             AutorId = autor.Id,
             Status = StatusSugestao.EmModeracao
@@ -107,6 +113,11 @@ public class SugestoesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<SugestaoDto>> Editar(int id, CreateSugestaoRequest request)
     {
+        if (!CamposObrigatoriosValidos(request.Titulo, request.Descricao, request.ResultadoEsperado))
+        {
+            return BadRequest("Título, descrição e resultado esperado são obrigatórios.");
+        }
+
         var currentUserId = CurrentUserId();
 
         var sugestao = await _db.Sugestoes
@@ -138,6 +149,7 @@ public class SugestoesController : ControllerBase
 
         sugestao.Titulo = request.Titulo;
         sugestao.Descricao = request.Descricao;
+        sugestao.ResultadoEsperado = request.ResultadoEsperado;
         sugestao.CategoriaId = request.CategoriaId;
         sugestao.Categoria = categoria;
 
@@ -303,10 +315,14 @@ public class SugestoesController : ControllerBase
 
     private int CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    private static bool CamposObrigatoriosValidos(string titulo, string descricao, string resultadoEsperado) =>
+        !string.IsNullOrWhiteSpace(titulo) && !string.IsNullOrWhiteSpace(descricao) && !string.IsNullOrWhiteSpace(resultadoEsperado);
+
     private static SugestaoDto ToDto(Sugestao s, int currentUserId) => new(
         s.Id,
         s.Titulo,
         s.Descricao,
+        s.ResultadoEsperado,
         s.CategoriaId,
         s.Categoria!.Nome,
         s.AutorId,

@@ -4,6 +4,7 @@ export interface Sugestao {
   id: number;
   titulo: string;
   descricao: string;
+  resultadoEsperado: string;
   categoriaId: number;
   categoriaNome: string;
   autorId: number;
@@ -20,6 +21,7 @@ export interface Sugestao {
 export interface CreateSugestaoRequest {
   titulo: string;
   descricao: string;
+  resultadoEsperado: string;
   categoriaId: number;
 }
 

@@ -27,6 +27,7 @@ export class SugestoesList implements OnInit {
 
   novoTitulo = '';
   novaDescricao = '';
+  novoResultadoEsperado = '';
   novaCategoriaId: number | null = null;
 
   constructor(
@@ -52,17 +53,23 @@ export class SugestoesList implements OnInit {
   }
 
   criarSugestao(): void {
-    if (!this.novoTitulo || !this.novaDescricao || !this.novaCategoriaId) {
-      this.erro.set('Preencha título, descrição e categoria.');
+    if (!this.novoTitulo || !this.novaDescricao || !this.novoResultadoEsperado || !this.novaCategoriaId) {
+      this.erro.set('Preencha título, descrição, resultado esperado e categoria.');
       return;
     }
 
     this.sugestoesService
-      .criar({ titulo: this.novoTitulo, descricao: this.novaDescricao, categoriaId: this.novaCategoriaId })
+      .criar({
+        titulo: this.novoTitulo,
+        descricao: this.novaDescricao,
+        resultadoEsperado: this.novoResultadoEsperado,
+        categoriaId: this.novaCategoriaId
+      })
       .subscribe({
         next: () => {
           this.novoTitulo = '';
           this.novaDescricao = '';
+          this.novoResultadoEsperado = '';
           this.novaCategoriaId = null;
           this.erro.set(null);
           // Sugestão entra "Em moderação" — só aparece no ranking após aprovação pelo Admin.

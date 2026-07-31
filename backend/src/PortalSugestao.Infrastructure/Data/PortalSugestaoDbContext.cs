@@ -38,6 +38,7 @@ public class PortalSugestaoDbContext : DbContext
         {
             entity.Property(s => s.Titulo).HasMaxLength(200).IsRequired();
             entity.Property(s => s.Descricao).HasMaxLength(4000).IsRequired();
+            entity.Property(s => s.ResultadoEsperado).HasMaxLength(2000).IsRequired();
 
             entity.HasOne(s => s.Categoria)
                 .WithMany(c => c.Sugestoes)

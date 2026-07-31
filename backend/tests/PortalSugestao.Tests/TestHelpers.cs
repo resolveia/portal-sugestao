@@ -32,9 +32,13 @@ internal static class TestHelpers
     }
 
     public static async Task<int> CriarSugestaoAsync(
-        this HttpClient client, int categoriaId, string titulo = "Sugestão de teste", string descricao = "Descrição de teste")
+        this HttpClient client,
+        int categoriaId,
+        string titulo = "Sugestão de teste",
+        string descricao = "Descrição de teste",
+        string resultadoEsperado = "Resultado esperado de teste")
     {
-        var response = await client.PostAsJsonAsync("/api/sugestoes", new { titulo, descricao, categoriaId });
+        var response = await client.PostAsJsonAsync("/api/sugestoes", new { titulo, descricao, resultadoEsperado, categoriaId });
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();

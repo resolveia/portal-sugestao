@@ -45,7 +45,19 @@ export class SugestoesService {
     return this.http.get<Categoria[]>(`${environment.apiUrl}/categorias`);
   }
 
+  listarTodasCategorias(): Observable<Categoria[]> {
+    return this.http.get<Categoria[]>(`${environment.apiUrl}/categorias/todas`);
+  }
+
   criarCategoria(nome: string): Observable<Categoria> {
     return this.http.post<Categoria>(`${environment.apiUrl}/categorias`, { nome });
+  }
+
+  editarCategoria(id: number, nome: string): Observable<Categoria> {
+    return this.http.put<Categoria>(`${environment.apiUrl}/categorias/${id}`, { nome });
+  }
+
+  removerCategoria(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/categorias/${id}`);
   }
 }

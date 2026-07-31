@@ -37,7 +37,10 @@ Use o `token` retornado no header `Authorization: Bearer <token>` das demais cha
 ## Categorias
 
 ### `GET /api/categorias`
-Lista categorias ativas. Requer autenticação (qualquer role).
+Lista categorias **ativas**. Requer autenticação (qualquer role). Usado no seletor de categoria ao criar/editar sugestão.
+
+### `GET /api/categorias/todas`
+Lista todas as categorias, ativas e inativas. Requer role `AdminInterno` — usado na tela de gestão de categorias.
 
 ### `POST /api/categorias`
 Cria uma categoria. Requer role `AdminInterno`.
@@ -46,6 +49,17 @@ Cria uma categoria. Requer role `AdminInterno`.
 ```json
 { "nome": "Financeiro" }
 ```
+**Respostas de erro**: `400` (nome vazio).
+
+### `PUT /api/categorias/{id}`
+Renomeia uma categoria. Requer role `AdminInterno`. Mesmo corpo do `POST`.
+
+**Respostas de erro**: `400` (nome vazio), `404` (não existe).
+
+### `DELETE /api/categorias/{id}`
+"Exclui" uma categoria — na prática, **desativa** (`ativo = false`), já que sugestões existentes referenciam a categoria (FK `Restrict`). Requer role `AdminInterno`. Retorna `204`.
+
+**Respostas de erro**: `404` (não existe).
 
 ## Sugestões
 
@@ -53,16 +67,18 @@ Cria uma categoria. Requer role `AdminInterno`.
 Lista sugestões **publicadas**, ordenadas por total de votos (ranking). Requer autenticação.
 
 ### `POST /api/sugestoes`
-Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1 do PRD). Requer autenticação.
+Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1 do PRD). Requer autenticação. `titulo`, `descricao` e `resultadoEsperado` são obrigatórios.
 
 **Request**
 ```json
 {
   "titulo": "Exportar relatório em Excel",
   "descricao": "Permitir exportar o relatório X para .xlsx",
+  "resultadoEsperado": "Conseguir baixar o relatório em .xlsx direto da tela de relatórios",
   "categoriaId": 1
 }
 ```
+**Respostas de erro**: `400` (algum campo obrigatório vazio, ou categoria inválida).
 
 ### `PUT /api/sugestoes/{id}`
 Edita a própria sugestão, permitido apenas enquanto `status` for `EmModeracao` (regra 7.1). Requer ser o autor.

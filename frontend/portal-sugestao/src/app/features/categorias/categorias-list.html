@@ -11,12 +11,30 @@
   <dx-data-grid [dataSource]="categorias()" [showBorders]="true" [columnAutoWidth]="true" noDataText="Nenhuma categoria cadastrada.">
     <dxi-column dataField="nome" caption="Nome"></dxi-column>
     <dxi-column dataField="ativo" caption="Ativa" dataType="boolean" [width]="90"></dxi-column>
+    <dxi-column caption="Ações" cellTemplate="acoesTemplate" [width]="260"></dxi-column>
+
+    <div *dxTemplate="let row of 'acoesTemplate'">
+      @if (editandoId() === row.data.id) {
+        <div class="edicao-inline">
+          <dx-text-box [(value)]="nomeEditado"></dx-text-box>
+          <div class="botoes">
+            <dx-button text="Salvar" type="success" (onClick)="salvarEdicao(row.data.id)"></dx-button>
+            <dx-button text="Cancelar" (onClick)="cancelarEdicao()"></dx-button>
+          </div>
+        </div>
+      } @else {
+        <div class="botoes">
+          <dx-button text="Editar" (onClick)="iniciarEdicao(row.data)"></dx-button>
+          <dx-button text="Excluir" type="danger" (onClick)="remover(row.data.id)"></dx-button>
+        </div>
+      }
+    </div>
   </dx-data-grid>
 
   <section class="nova-categoria">
     <h2>Nova categoria</h2>
     <div class="campo">
-      <label>Nome</label>
+      <label>Nome *</label>
       <dx-text-box [(value)]="novoNome" placeholder="Ex: Financeiro"></dx-text-box>
     </div>
     <dx-button text="Criar categoria" type="default" (onClick)="criarCategoria()"></dx-button>

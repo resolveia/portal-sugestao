@@ -52,15 +52,19 @@
   <section class="nova-sugestao">
     <h2>Nova sugestão</h2>
     <div class="campo">
-      <label>Título</label>
+      <label>Título *</label>
       <dx-text-box [(value)]="novoTitulo"></dx-text-box>
     </div>
     <div class="campo">
-      <label>Descrição</label>
+      <label>Descrição *</label>
       <dx-text-box [(value)]="novaDescricao"></dx-text-box>
     </div>
     <div class="campo">
-      <label>Categoria</label>
+      <label>Resultado esperado com essa solicitação *</label>
+      <dx-text-box [(value)]="novoResultadoEsperado"></dx-text-box>
+    </div>
+    <div class="campo">
+      <label>Categoria *</label>
       <dx-select-box
         [items]="categorias()"
         displayExpr="nome"
