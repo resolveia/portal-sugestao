@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { DxDataGridModule, DxTemplateModule } from 'devextreme-angular';
-import { DxTextBoxModule, DxSelectBoxModule, DxButtonModule } from 'devextreme-angular';
+import { DxTextBoxModule, DxSelectBoxModule, DxButtonModule, DxPopupModule } from 'devextreme-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
 import { Categoria, Produto, Sugestao } from '../../core/models/sugestao.model';
@@ -11,7 +11,7 @@ const LIMITE_VOTOS = 3;
 @Component({
   selector: 'app-sugestoes-list',
   standalone: true,
-  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule, Comentarios],
+  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule, DxPopupModule, Comentarios],
   templateUrl: './sugestoes-list.html',
   styleUrl: './sugestoes-list.scss'
 })
@@ -24,6 +24,8 @@ export class SugestoesList implements OnInit {
   readonly limiteVotos = LIMITE_VOTOS;
   readonly votosUsados = computed(() => this.sugestoes().filter((s) => s.votadoPorMim).length);
   readonly votosDisponiveis = computed(() => this.limiteVotos - this.votosUsados());
+
+  readonly mostrarNovaSugestao = signal(false);
 
   novoProdutoId: number | null = null;
   novoTitulo = '';
@@ -79,6 +81,7 @@ export class SugestoesList implements OnInit {
           this.novoResultadoEsperado = '';
           this.novaCategoriaId = null;
           this.erro.set(null);
+          this.mostrarNovaSugestao.set(false);
           // Sugestão entra "Em moderação" — só aparece no ranking após aprovação pelo Admin.
         },
         error: () => this.erro.set('Não foi possível criar a sugestão.')

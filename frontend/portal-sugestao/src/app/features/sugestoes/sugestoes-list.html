@@ -4,6 +4,7 @@
     @if (authService.usuario()?.role === 'Cliente') {
       <span class="votos-disponiveis">Você tem <strong>{{ votosDisponiveis() }}</strong> de {{ limiteVotos }} votos disponíveis</span>
     }
+    <dx-button class="btn-nova-sugestao" text="Nova sugestão" type="default" icon="plus" (onClick)="mostrarNovaSugestao.set(true)"></dx-button>
   </div>
 
   @if (erro()) {
@@ -46,38 +47,47 @@
     </dx-data-grid>
   </section>
 
-  <section class="card nova-sugestao">
-    <h2>Nova sugestão</h2>
-    <div class="campo">
-      <label>Produto *</label>
-      <dx-select-box
-        [items]="produtos()"
-        displayExpr="nome"
-        valueExpr="id"
-        [(value)]="novoProdutoId"
-      ></dx-select-box>
+  <dx-popup
+    [(visible)]="mostrarNovaSugestao"
+    title="Nova sugestão"
+    [width]="480"
+    height="auto"
+    [showCloseButton]="true"
+    [dragEnabled]="false"
+    [hideOnOutsideClick]="true"
+  >
+    <div class="nova-sugestao">
+      <div class="campo">
+        <label>Produto *</label>
+        <dx-select-box
+          [items]="produtos()"
+          displayExpr="nome"
+          valueExpr="id"
+          [(value)]="novoProdutoId"
+        ></dx-select-box>
+      </div>
+      <div class="campo">
+        <label>Título *</label>
+        <dx-text-box [(value)]="novoTitulo"></dx-text-box>
+      </div>
+      <div class="campo">
+        <label>Descrição *</label>
+        <dx-text-box [(value)]="novaDescricao"></dx-text-box>
+      </div>
+      <div class="campo">
+        <label>Resultado esperado com essa solicitação *</label>
+        <dx-text-box [(value)]="novoResultadoEsperado"></dx-text-box>
+      </div>
+      <div class="campo">
+        <label>Categoria *</label>
+        <dx-select-box
+          [items]="categorias()"
+          displayExpr="nome"
+          valueExpr="id"
+          [(value)]="novaCategoriaId"
+        ></dx-select-box>
+      </div>
+      <dx-button text="Enviar sugestão" type="default" (onClick)="criarSugestao()"></dx-button>
     </div>
-    <div class="campo">
-      <label>Título *</label>
-      <dx-text-box [(value)]="novoTitulo"></dx-text-box>
-    </div>
-    <div class="campo">
-      <label>Descrição *</label>
-      <dx-text-box [(value)]="novaDescricao"></dx-text-box>
-    </div>
-    <div class="campo">
-      <label>Resultado esperado com essa solicitação *</label>
-      <dx-text-box [(value)]="novoResultadoEsperado"></dx-text-box>
-    </div>
-    <div class="campo">
-      <label>Categoria *</label>
-      <dx-select-box
-        [items]="categorias()"
-        displayExpr="nome"
-        valueExpr="id"
-        [(value)]="novaCategoriaId"
-      ></dx-select-box>
-    </div>
-    <dx-button text="Enviar sugestão" type="default" (onClick)="criarSugestao()"></dx-button>
-  </section>
+  </dx-popup>
 </div>
