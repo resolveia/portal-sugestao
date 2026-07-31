@@ -1,5 +1,4 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxButtonModule } from 'devextreme-angular';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
 import { Categoria } from '../../core/models/sugestao.model';
@@ -18,10 +17,7 @@ export class CategoriasList implements OnInit {
   novoNome = '';
   nomeEditado = '';
 
-  constructor(
-    private readonly sugestoesService: SugestoesService,
-    private readonly router: Router
-  ) {}
+  constructor(private readonly sugestoesService: SugestoesService) {}
 
   ngOnInit(): void {
     this.carregar();
@@ -84,9 +80,5 @@ export class CategoriasList implements OnInit {
       },
       error: () => this.erro.set('Não foi possível excluir a categoria.')
     });
-  }
-
-  voltar(): void {
-    this.router.navigate(['/sugestoes']);
   }
 }

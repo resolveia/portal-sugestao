@@ -9,18 +9,24 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login').then((m) => m.Login)
   },
   {
-    path: 'sugestoes',
+    path: '',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/sugestoes/sugestoes-list').then((m) => m.SugestoesList)
-  },
-  {
-    path: 'moderacao',
-    canActivate: [authGuard, adminGuard],
-    loadComponent: () => import('./features/moderacao/moderacao-list').then((m) => m.ModeracaoList)
-  },
-  {
-    path: 'categorias',
-    canActivate: [authGuard, adminGuard],
-    loadComponent: () => import('./features/categorias/categorias-list').then((m) => m.CategoriasList)
+    loadComponent: () => import('./core/layout/app-shell').then((m) => m.AppShell),
+    children: [
+      {
+        path: 'sugestoes',
+        loadComponent: () => import('./features/sugestoes/sugestoes-list').then((m) => m.SugestoesList)
+      },
+      {
+        path: 'moderacao',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/moderacao/moderacao-list').then((m) => m.ModeracaoList)
+      },
+      {
+        path: 'categorias',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/categorias/categorias-list').then((m) => m.CategoriasList)
+      }
+    ]
   }
 ];

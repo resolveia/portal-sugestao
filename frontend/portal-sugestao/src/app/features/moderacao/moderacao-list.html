@@ -1,36 +1,37 @@
 <div class="moderacao-page">
-  <header>
+  <div class="page-title">
     <h1>Fila de Moderação</h1>
-    <dx-button text="Voltar" (onClick)="voltar()"></dx-button>
-  </header>
+  </div>
 
   @if (erro()) {
     <p class="erro">{{ erro() }}</p>
   }
 
-  <dx-data-grid [dataSource]="pendentes()" [showBorders]="true" [columnAutoWidth]="true" noDataText="Nenhuma sugestão aguardando moderação.">
-    <dxi-column dataField="titulo" caption="Título"></dxi-column>
-    <dxi-column dataField="descricao" caption="Descrição"></dxi-column>
-    <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
-    <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
-    <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date" [format]="'dd/MM/yyyy'"></dxi-column>
-    <dxi-column caption="Ações" cellTemplate="acoesTemplate" [width]="280"></dxi-column>
+  <section class="card">
+    <dx-data-grid [dataSource]="pendentes()" [showBorders]="true" [columnAutoWidth]="true" noDataText="Nenhuma sugestão aguardando moderação.">
+      <dxi-column dataField="titulo" caption="Título"></dxi-column>
+      <dxi-column dataField="descricao" caption="Descrição"></dxi-column>
+      <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
+      <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
+      <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date" [format]="'dd/MM/yyyy'"></dxi-column>
+      <dxi-column caption="Ações" cellTemplate="acoesTemplate" [width]="280"></dxi-column>
 
-    <div *dxTemplate="let row of 'acoesTemplate'">
-      @if (rejeitandoId() === row.data.id) {
-        <div class="rejeitar-inline">
-          <dx-text-box [(value)]="motivoTexto" placeholder="Motivo da rejeição"></dx-text-box>
-          <div class="botoes">
-            <dx-button text="Confirmar" type="danger" (onClick)="confirmarRejeicao(row.data.id)"></dx-button>
-            <dx-button text="Cancelar" (onClick)="cancelarRejeicao()"></dx-button>
+      <div *dxTemplate="let row of 'acoesTemplate'">
+        @if (rejeitandoId() === row.data.id) {
+          <div class="rejeitar-inline">
+            <dx-text-box [(value)]="motivoTexto" placeholder="Motivo da rejeição"></dx-text-box>
+            <div class="botoes">
+              <dx-button text="Confirmar" type="danger" (onClick)="confirmarRejeicao(row.data.id)"></dx-button>
+              <dx-button text="Cancelar" (onClick)="cancelarRejeicao()"></dx-button>
+            </div>
           </div>
-        </div>
-      } @else {
-        <div class="botoes">
-          <dx-button text="Aprovar" type="success" (onClick)="aprovar(row.data.id)"></dx-button>
-          <dx-button text="Rejeitar" type="danger" (onClick)="iniciarRejeicao(row.data.id)"></dx-button>
-        </div>
-      }
-    </div>
-  </dx-data-grid>
+        } @else {
+          <div class="botoes">
+            <dx-button text="Aprovar" type="success" (onClick)="aprovar(row.data.id)"></dx-button>
+            <dx-button text="Rejeitar" type="danger" (onClick)="iniciarRejeicao(row.data.id)"></dx-button>
+          </div>
+        }
+      </div>
+    </dx-data-grid>
+  </section>
 </div>

@@ -4,7 +4,6 @@ import { DxTextBoxModule, DxSelectBoxModule, DxButtonModule } from 'devextreme-a
 import { AuthService } from '../../core/auth/auth.service';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
 import { Categoria, Sugestao } from '../../core/models/sugestao.model';
-import { Router } from '@angular/router';
 import { Comentarios } from './comentarios/comentarios';
 
 const LIMITE_VOTOS = 3;
@@ -32,8 +31,7 @@ export class SugestoesList implements OnInit {
 
   constructor(
     private readonly sugestoesService: SugestoesService,
-    protected readonly authService: AuthService,
-    private readonly router: Router
+    protected readonly authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -98,16 +96,4 @@ export class SugestoesList implements OnInit {
     });
   }
 
-  irParaModeracao(): void {
-    this.router.navigate(['/moderacao']);
-  }
-
-  irParaCategorias(): void {
-    this.router.navigate(['/categorias']);
-  }
-
-  sair(): void {
-    this.authService.logout();
-    this.router.navigate(['/login']);
-  }
 }

@@ -1,0 +1,23 @@
+<div class="app-shell">
+  <header class="app-header">
+    <a routerLink="/sugestoes" class="brand">Portal de Sugestões</a>
+
+    <nav class="app-nav">
+      <a routerLink="/sugestoes" routerLinkActive="active">Sugestões</a>
+      @if (authService.usuario()?.role === 'AdminInterno') {
+        <a routerLink="/moderacao" routerLinkActive="active">Moderação</a>
+        <a routerLink="/categorias" routerLinkActive="active">Categorias</a>
+      }
+    </nav>
+
+    <div class="app-user">
+      <span class="nome">{{ authService.usuario()?.nome }}</span>
+      <span class="badge">{{ authService.usuario()?.role }}</span>
+      <dx-button text="Sair" (onClick)="sair()"></dx-button>
+    </div>
+  </header>
+
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

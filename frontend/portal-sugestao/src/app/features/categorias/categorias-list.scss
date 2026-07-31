@@ -1,25 +1,20 @@
 .categorias-page {
   max-width: 900px;
-  margin: 32px auto;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 0 16px;
 }
 
-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-
+.page-title {
   h1 {
-    flex: 1;
     margin: 0;
+    font-size: 1.5rem;
   }
 }
 
 .erro {
-  color: #c0392b;
+  color: var(--ps-color-danger);
 }
 
 .nova-categoria {
@@ -27,12 +22,22 @@ header {
   flex-direction: column;
   gap: 12px;
   max-width: 320px;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+  }
 }
 
 .campo {
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  label {
+    font-size: 0.85rem;
+    color: var(--ps-color-text-muted);
+  }
 }
 
 .botoes {

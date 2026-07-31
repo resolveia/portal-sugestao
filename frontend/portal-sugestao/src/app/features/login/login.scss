@@ -1,23 +1,60 @@
 .login-page {
-  max-width: 360px;
-  margin: 64px auto;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+.brand {
+  text-align: center;
+  margin-bottom: 4px;
+
+  h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--ps-color-primary);
+  }
+
+  .subtitulo {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: var(--ps-color-text-muted);
+  }
+}
+
 .aviso {
-  font-size: 0.85rem;
-  color: #888;
+  font-size: 0.8rem;
+  color: var(--ps-color-text-muted);
+  background-color: var(--ps-color-bg);
+  border-radius: 6px;
+  padding: 8px 12px;
 }
 
 .campo {
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  label {
+    font-size: 0.85rem;
+    color: var(--ps-color-text-muted);
+  }
 }
 
 .erro {
-  color: #c0392b;
+  color: var(--ps-color-danger);
   font-size: 0.9rem;
+}
+
+.botao-entrar {
+  margin-top: 8px;
 }

@@ -1,41 +1,54 @@
 .sugestoes-page {
-  max-width: 900px;
-  margin: 32px auto;
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 0 16px;
 }
 
-header {
+.page-title {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 16px;
 
   h1 {
-    flex: 1;
     margin: 0;
+    font-size: 1.5rem;
   }
 }
 
 .erro {
-  color: #c0392b;
+  color: var(--ps-color-danger);
 }
 
 .votos-disponiveis {
   font-size: 0.9rem;
-  color: #555;
+  color: var(--ps-color-text-muted);
+
+  strong {
+    color: var(--ps-color-primary);
+  }
 }
 
 .nova-sugestao {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 420px;
+  max-width: 460px;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+  }
 }
 
 .campo {
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  label {
+    font-size: 0.85rem;
+    color: var(--ps-color-text-muted);
+  }
 }

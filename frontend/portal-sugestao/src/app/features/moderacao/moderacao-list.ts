@@ -1,5 +1,4 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxButtonModule } from 'devextreme-angular';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
 import { Sugestao } from '../../core/models/sugestao.model';
@@ -17,10 +16,7 @@ export class ModeracaoList implements OnInit {
   readonly rejeitandoId = signal<number | null>(null);
   motivoTexto = '';
 
-  constructor(
-    private readonly sugestoesService: SugestoesService,
-    private readonly router: Router
-  ) {}
+  constructor(private readonly sugestoesService: SugestoesService) {}
 
   ngOnInit(): void {
     this.carregar();
@@ -67,9 +63,5 @@ export class ModeracaoList implements OnInit {
       },
       error: () => this.erro.set('Não foi possível rejeitar a sugestão.')
     });
-  }
-
-  voltar(): void {
-    this.router.navigate(['/sugestoes']);
   }
 }
