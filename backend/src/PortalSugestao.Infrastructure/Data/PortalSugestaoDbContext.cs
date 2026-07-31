@@ -12,6 +12,7 @@ public class PortalSugestaoDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Categoria> Categorias => Set<Categoria>();
+    public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<Sugestao> Sugestoes => Set<Sugestao>();
     public DbSet<Voto> Votos => Set<Voto>();
     public DbSet<Comentario> Comentarios => Set<Comentario>();
@@ -34,11 +35,31 @@ public class PortalSugestaoDbContext : DbContext
             entity.Property(c => c.Nome).HasMaxLength(100).IsRequired();
         });
 
+        modelBuilder.Entity<Produto>(entity =>
+        {
+            entity.HasIndex(p => p.Nome).IsUnique();
+            entity.Property(p => p.Nome).HasMaxLength(100).IsRequired();
+
+            // Produtos comercializados hoje — semeados pra não depender de cadastro manual pós-deploy.
+            entity.HasData(
+                new Produto { Id = 1, Nome = "AJORS.OOH", Ativo = true },
+                new Produto { Id = 2, Nome = "AJORS.SIGN", Ativo = true });
+        });
+
         modelBuilder.Entity<Sugestao>(entity =>
         {
             entity.Property(s => s.Titulo).HasMaxLength(200).IsRequired();
             entity.Property(s => s.Descricao).HasMaxLength(4000).IsRequired();
             entity.Property(s => s.ResultadoEsperado).HasMaxLength(2000).IsRequired();
+
+            entity.HasOne(s => s.Produto)
+                .WithMany(p => p.Sugestoes)
+                .HasForeignKey(s => s.ProdutoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Default só pra migration conseguir adicionar a coluna em sugestões já existentes
+            // (aponta pro primeiro produto semeado, AJORS.OOH); daqui pra frente é sempre explícito.
+            entity.Property(s => s.ProdutoId).HasDefaultValue(1);
 
             entity.HasOne(s => s.Categoria)
                 .WithMany(c => c.Sugestoes)

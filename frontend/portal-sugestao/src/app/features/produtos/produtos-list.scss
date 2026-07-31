@@ -1,0 +1,53 @@
+.produtos-page {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page-title {
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+}
+
+.erro {
+  color: var(--ps-color-danger);
+}
+
+.novo-produto {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 320px;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+  }
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: 0.85rem;
+    color: var(--ps-color-text-muted);
+  }
+}
+
+.botoes {
+  display: flex;
+  gap: 8px;
+}
+
+.edicao-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}

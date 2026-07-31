@@ -17,6 +17,7 @@
       [columnAutoWidth]="true"
       [masterDetail]="{ enabled: true, template: 'comentariosTemplate' }"
     >
+      <dxi-column dataField="produtoNome" caption="Produto"></dxi-column>
       <dxi-column dataField="titulo" caption="Título"></dxi-column>
       <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
       <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
@@ -47,6 +48,15 @@
 
   <section class="card nova-sugestao">
     <h2>Nova sugestão</h2>
+    <div class="campo">
+      <label>Produto *</label>
+      <dx-select-box
+        [items]="produtos()"
+        displayExpr="nome"
+        valueExpr="id"
+        [(value)]="novoProdutoId"
+      ></dx-select-box>
+    </div>
     <div class="campo">
       <label>Título *</label>
       <dx-text-box [(value)]="novoTitulo"></dx-text-box>

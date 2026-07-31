@@ -16,10 +16,11 @@ public class SugestoesControllerTests
 
         var response = await cliente.PostAsJsonAsync(
             "/api/sugestoes",
-            new { titulo = "Nova", descricao = "Desc", resultadoEsperado = "Resultado", categoriaId });
+            new { produtoId = 1, titulo = "Nova", descricao = "Desc", resultadoEsperado = "Resultado", categoriaId });
         var dto = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal("EmModeracao", dto.GetProperty("status").GetString());
+        Assert.Equal("AJORS.OOH", dto.GetProperty("produtoNome").GetString());
     }
 
     [Theory]
@@ -35,7 +36,22 @@ public class SugestoesControllerTests
 
         var response = await cliente.PostAsJsonAsync(
             "/api/sugestoes",
-            new { titulo, descricao, resultadoEsperado, categoriaId });
+            new { produtoId = 1, titulo, descricao, resultadoEsperado, categoriaId });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Criar_ProdutoInvalidoDaBadRequest()
+    {
+        await using var factory = new CustomWebApplicationFactory();
+        var admin = await factory.CreateAuthenticatedClientAsync("admin.sug5@empresa.com", "Admin", "Empresa", "AdminInterno");
+        var categoriaId = await admin.CriarCategoriaAsync();
+        var cliente = await factory.CreateAuthenticatedClientAsync("cliente.sug5@empresa.com", "Cliente", "Empresa", "Cliente");
+
+        var response = await cliente.PostAsJsonAsync(
+            "/api/sugestoes",
+            new { produtoId = 9999, titulo = "T", descricao = "D", resultadoEsperado = "R", categoriaId });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -73,19 +89,19 @@ public class SugestoesControllerTests
 
         var respostaOutro = await outroCliente.PutAsJsonAsync(
             $"/api/sugestoes/{id}",
-            new { titulo = "Hack", descricao = "Hack", resultadoEsperado = "Hack", categoriaId });
+            new { produtoId = 1, titulo = "Hack", descricao = "Hack", resultadoEsperado = "Hack", categoriaId });
         Assert.Equal(HttpStatusCode.Forbidden, respostaOutro.StatusCode);
 
         var respostaAutor = await autor.PutAsJsonAsync(
             $"/api/sugestoes/{id}",
-            new { titulo = "Editado", descricao = "Editado", resultadoEsperado = "Editado", categoriaId });
+            new { produtoId = 1, titulo = "Editado", descricao = "Editado", resultadoEsperado = "Editado", categoriaId });
         Assert.Equal(HttpStatusCode.OK, respostaAutor.StatusCode);
 
         await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
 
         var respostaPosModeracao = await autor.PutAsJsonAsync(
             $"/api/sugestoes/{id}",
-            new { titulo = "Tarde demais", descricao = "x", resultadoEsperado = "x", categoriaId });
+            new { produtoId = 1, titulo = "Tarde demais", descricao = "x", resultadoEsperado = "x", categoriaId });
         Assert.Equal(HttpStatusCode.Conflict, respostaPosModeracao.StatusCode);
     }
 }

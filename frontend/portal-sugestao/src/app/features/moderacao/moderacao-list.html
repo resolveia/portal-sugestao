@@ -9,6 +9,7 @@
 
   <section class="card">
     <dx-data-grid [dataSource]="pendentes()" [showBorders]="true" [columnAutoWidth]="true" noDataText="Nenhuma sugestão aguardando moderação.">
+      <dxi-column dataField="produtoNome" caption="Produto"></dxi-column>
       <dxi-column dataField="titulo" caption="Título"></dxi-column>
       <dxi-column dataField="descricao" caption="Descrição"></dxi-column>
       <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>

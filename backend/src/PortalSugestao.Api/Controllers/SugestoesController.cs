@@ -36,6 +36,7 @@ public class SugestoesController : ControllerBase
 
         var sugestoes = await _db.Sugestoes
             .Where(s => s.Status == StatusSugestao.Publicada)
+            .Include(s => s.Produto)
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
             .Include(s => s.Votos)
@@ -56,6 +57,7 @@ public class SugestoesController : ControllerBase
 
         var sugestoes = await _db.Sugestoes
             .Where(s => s.Status == StatusSugestao.EmModeracao)
+            .Include(s => s.Produto)
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
             .Include(s => s.Votos)
@@ -76,6 +78,12 @@ public class SugestoesController : ControllerBase
             return BadRequest("Título, descrição e resultado esperado são obrigatórios.");
         }
 
+        var produto = await _db.Produtos.FindAsync(request.ProdutoId);
+        if (produto is null)
+        {
+            return BadRequest("Produto inválido.");
+        }
+
         var categoria = await _db.Categorias.FindAsync(request.CategoriaId);
         if (categoria is null)
         {
@@ -93,6 +101,7 @@ public class SugestoesController : ControllerBase
             Titulo = request.Titulo,
             Descricao = request.Descricao,
             ResultadoEsperado = request.ResultadoEsperado,
+            ProdutoId = request.ProdutoId,
             CategoriaId = request.CategoriaId,
             AutorId = autor.Id,
             Status = StatusSugestao.EmModeracao
@@ -101,6 +110,7 @@ public class SugestoesController : ControllerBase
         _db.Sugestoes.Add(sugestao);
         await _db.SaveChangesAsync();
 
+        sugestao.Produto = produto;
         sugestao.Categoria = categoria;
         sugestao.Autor = autor;
 
@@ -121,6 +131,7 @@ public class SugestoesController : ControllerBase
         var currentUserId = CurrentUserId();
 
         var sugestao = await _db.Sugestoes
+            .Include(s => s.Produto)
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
             .Include(s => s.Votos)
@@ -141,6 +152,12 @@ public class SugestoesController : ControllerBase
             return Conflict("Sugestão já foi moderada e não pode mais ser editada.");
         }
 
+        var produto = await _db.Produtos.FindAsync(request.ProdutoId);
+        if (produto is null)
+        {
+            return BadRequest("Produto inválido.");
+        }
+
         var categoria = await _db.Categorias.FindAsync(request.CategoriaId);
         if (categoria is null)
         {
@@ -150,6 +167,8 @@ public class SugestoesController : ControllerBase
         sugestao.Titulo = request.Titulo;
         sugestao.Descricao = request.Descricao;
         sugestao.ResultadoEsperado = request.ResultadoEsperado;
+        sugestao.ProdutoId = request.ProdutoId;
+        sugestao.Produto = produto;
         sugestao.CategoriaId = request.CategoriaId;
         sugestao.Categoria = categoria;
 
@@ -168,6 +187,7 @@ public class SugestoesController : ControllerBase
         var currentUserId = CurrentUserId();
 
         var sugestao = await _db.Sugestoes
+            .Include(s => s.Produto)
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
             .Include(s => s.Votos)
@@ -210,6 +230,7 @@ public class SugestoesController : ControllerBase
         var currentUserId = CurrentUserId();
 
         var sugestao = await _db.Sugestoes
+            .Include(s => s.Produto)
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
             .Include(s => s.Votos)
@@ -248,6 +269,7 @@ public class SugestoesController : ControllerBase
         var currentUserId = CurrentUserId();
 
         var sugestao = await _db.Sugestoes
+            .Include(s => s.Produto)
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
             .Include(s => s.Votos)
@@ -290,6 +312,7 @@ public class SugestoesController : ControllerBase
         var currentUserId = CurrentUserId();
 
         var sugestao = await _db.Sugestoes
+            .Include(s => s.Produto)
             .Include(s => s.Categoria)
             .Include(s => s.Autor)
             .Include(s => s.Votos)
@@ -323,6 +346,8 @@ public class SugestoesController : ControllerBase
         s.Titulo,
         s.Descricao,
         s.ResultadoEsperado,
+        s.ProdutoId,
+        s.Produto!.Nome,
         s.CategoriaId,
         s.Categoria!.Nome,
         s.AutorId,

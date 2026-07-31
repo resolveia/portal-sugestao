@@ -7,6 +7,8 @@ public record SugestaoDto(
     string Titulo,
     string Descricao,
     string ResultadoEsperado,
+    int ProdutoId,
+    string ProdutoNome,
     int CategoriaId,
     string CategoriaNome,
     int AutorId,
@@ -19,6 +21,6 @@ public record SugestaoDto(
     string? MotivoRejeicao = null,
     string? ModeradorNome = null);
 
-public record CreateSugestaoRequest(string Titulo, string Descricao, string ResultadoEsperado, int CategoriaId);
+public record CreateSugestaoRequest(int ProdutoId, string Titulo, string Descricao, string ResultadoEsperado, int CategoriaId);
 
 public record RejeitarSugestaoRequest(string Motivo);

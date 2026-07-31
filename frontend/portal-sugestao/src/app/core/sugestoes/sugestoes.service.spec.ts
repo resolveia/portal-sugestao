@@ -33,7 +33,7 @@ describe('SugestoesService', () => {
   });
 
   it('criar() faz POST em /sugestoes com o corpo certo', () => {
-    const request = { titulo: 'T', descricao: 'D', resultadoEsperado: 'R', categoriaId: 1 };
+    const request = { produtoId: 1, titulo: 'T', descricao: 'D', resultadoEsperado: 'R', categoriaId: 1 };
     service.criar(request).subscribe();
     const req = httpMock.expectOne(`${environment.apiUrl}/sugestoes`);
     expect(req.request.method).toBe('POST');
@@ -42,7 +42,7 @@ describe('SugestoesService', () => {
   });
 
   it('editar() faz PUT em /sugestoes/{id}', () => {
-    const request = { titulo: 'T', descricao: 'D', resultadoEsperado: 'R', categoriaId: 1 };
+    const request = { produtoId: 1, titulo: 'T', descricao: 'D', resultadoEsperado: 'R', categoriaId: 1 };
     service.editar(5, request).subscribe();
     const req = httpMock.expectOne(`${environment.apiUrl}/sugestoes/5`);
     expect(req.request.method).toBe('PUT');
@@ -112,6 +112,43 @@ describe('SugestoesService', () => {
   it('removerCategoria() faz DELETE em /categorias/{id}', () => {
     service.removerCategoria(5).subscribe();
     const req = httpMock.expectOne(`${environment.apiUrl}/categorias/5`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({});
+  });
+
+  it('listarProdutos() faz GET em /produtos', () => {
+    service.listarProdutos().subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/produtos`);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('listarTodosProdutos() faz GET em /produtos/todos', () => {
+    service.listarTodosProdutos().subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/produtos/todos`);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('criarProduto() faz POST em /produtos com o nome', () => {
+    service.criarProduto('AJORS.OOH').subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/produtos`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ nome: 'AJORS.OOH' });
+    req.flush({});
+  });
+
+  it('editarProduto() faz PUT em /produtos/{id} com o nome', () => {
+    service.editarProduto(5, 'Novo nome').subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/produtos/5`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ nome: 'Novo nome' });
+    req.flush({});
+  });
+
+  it('removerProduto() faz DELETE em /produtos/{id}', () => {
+    service.removerProduto(5).subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/produtos/5`);
     expect(req.request.method).toBe('DELETE');
     req.flush({});
   });

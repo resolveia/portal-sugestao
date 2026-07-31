@@ -5,6 +5,8 @@ export interface Sugestao {
   titulo: string;
   descricao: string;
   resultadoEsperado: string;
+  produtoId: number;
+  produtoNome: string;
   categoriaId: number;
   categoriaNome: string;
   autorId: number;
@@ -19,6 +21,7 @@ export interface Sugestao {
 }
 
 export interface CreateSugestaoRequest {
+  produtoId: number;
   titulo: string;
   descricao: string;
   resultadoEsperado: string;
@@ -30,6 +33,12 @@ export interface RejeitarRequest {
 }
 
 export interface Categoria {
+  id: number;
+  nome: string;
+  ativo: boolean;
+}
+
+export interface Produto {
   id: number;
   nome: string;
   ativo: boolean;

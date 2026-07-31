@@ -31,14 +31,27 @@ internal static class TestHelpers
         return body.GetProperty("id").GetInt32();
     }
 
+    public static async Task<int> CriarProdutoAsync(this HttpClient adminClient, string nome = "Produto Teste")
+    {
+        var response = await adminClient.PostAsJsonAsync("/api/produtos", new { nome });
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return body.GetProperty("id").GetInt32();
+    }
+
+    /// <summary>produtoId=1 por padrão: aponta pro "AJORS.OOH" semeado via HasData, sempre presente.</summary>
     public static async Task<int> CriarSugestaoAsync(
         this HttpClient client,
         int categoriaId,
         string titulo = "Sugestão de teste",
         string descricao = "Descrição de teste",
-        string resultadoEsperado = "Resultado esperado de teste")
+        string resultadoEsperado = "Resultado esperado de teste",
+        int produtoId = 1)
     {
-        var response = await client.PostAsJsonAsync("/api/sugestoes", new { titulo, descricao, resultadoEsperado, categoriaId });
+        var response = await client.PostAsJsonAsync(
+            "/api/sugestoes",
+            new { produtoId, titulo, descricao, resultadoEsperado, categoriaId });
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();

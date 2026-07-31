@@ -61,24 +61,54 @@ Renomeia uma categoria. Requer role `AdminInterno`. Mesmo corpo do `POST`.
 
 **Respostas de erro**: `404` (não existe).
 
+## Produtos
+
+Lista de ERPs comercializados pela empresa (hoje `AJORS.OOH` e `AJORS.SIGN`, semeados via migration). Endpoints idênticos aos de Categorias.
+
+### `GET /api/produtos`
+Lista produtos **ativos**. Requer autenticação (qualquer role). Usado no seletor de produto ao criar/editar sugestão.
+
+### `GET /api/produtos/todos`
+Lista todos os produtos, ativos e inativos. Requer role `AdminInterno` — usado na tela de gestão de produtos.
+
+### `POST /api/produtos`
+Cria um produto. Requer role `AdminInterno`.
+
+**Request**
+```json
+{ "nome": "AJORS.OOH" }
+```
+**Respostas de erro**: `400` (nome vazio).
+
+### `PUT /api/produtos/{id}`
+Renomeia um produto. Requer role `AdminInterno`. Mesmo corpo do `POST`.
+
+**Respostas de erro**: `400` (nome vazio), `404` (não existe).
+
+### `DELETE /api/produtos/{id}`
+"Exclui" um produto — na prática, **desativa** (`ativo = false`), já que sugestões existentes referenciam o produto (FK `Restrict`). Requer role `AdminInterno`. Retorna `204`.
+
+**Respostas de erro**: `404` (não existe).
+
 ## Sugestões
 
 ### `GET /api/sugestoes`
 Lista sugestões **publicadas**, ordenadas por total de votos (ranking). Requer autenticação.
 
 ### `POST /api/sugestoes`
-Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1 do PRD). Requer autenticação. `titulo`, `descricao` e `resultadoEsperado` são obrigatórios.
+Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1 do PRD). Requer autenticação. `produtoId`, `titulo`, `descricao`, `resultadoEsperado` e `categoriaId` são obrigatórios.
 
 **Request**
 ```json
 {
+  "produtoId": 1,
   "titulo": "Exportar relatório em Excel",
   "descricao": "Permitir exportar o relatório X para .xlsx",
   "resultadoEsperado": "Conseguir baixar o relatório em .xlsx direto da tela de relatórios",
   "categoriaId": 1
 }
 ```
-**Respostas de erro**: `400` (algum campo obrigatório vazio, ou categoria inválida).
+**Respostas de erro**: `400` (algum campo obrigatório vazio, produto inválido ou categoria inválida).
 
 ### `PUT /api/sugestoes/{id}`
 Edita a própria sugestão, permitido apenas enquanto `status` for `EmModeracao` (regra 7.1). Requer ser o autor.

@@ -26,6 +26,11 @@ export const routes: Routes = [
         path: 'categorias',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/categorias/categorias-list').then((m) => m.CategoriasList)
+      },
+      {
+        path: 'produtos',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/produtos/produtos-list').then((m) => m.ProdutosList)
       }
     ]
   }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using PortalSugestao.Infrastructure.Data;
 
 namespace PortalSugestao.Tests;
@@ -41,6 +42,21 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<PortalSugestaoDbContext>(options => options.UseInMemoryDatabase(_dbName));
         });
+    }
+
+    /// <summary>
+    /// EnsureCreated() é o que realmente aplica os dados semeados via HasData (ex.: produtos
+    /// AJORS.OOH/AJORS.SIGN) no provider InMemory — diferente do SQL Server real, o InMemory não
+    /// passa pelas migrations, então sem isso a tabela nasce vazia.
+    /// </summary>
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+
+        using var scope = host.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<PortalSugestaoDbContext>().Database.EnsureCreated();
+
+        return host;
     }
 
     /// <summary>Novo DbContext apontando para o mesmo banco InMemory da API, para inspecionar o estado nos asserts.</summary>
