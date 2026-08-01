@@ -26,12 +26,12 @@ Atualmente não existe um canal centralizado para captar e priorizar pedidos de 
 
 Todas as funcionalidades abaixo compõem a primeira e única fase planejada no momento:
 
-1. **Cadastro de sugestões** pelo cliente (título, descrição, categoria/módulo).
+1. **Cadastro de sugestões** pelo cliente (produto/ERP de origem, título, descrição, resultado esperado com a solicitação, categoria/módulo — todos obrigatórios).
 2. **Moderação/aprovação** pela equipe interna antes da sugestão ficar pública.
 3. **Votação** em sugestões aprovadas, com limite de **3 votos ativos por usuário**, com **realocação** (o cliente pode remover um voto de uma sugestão e aplicá-lo em outra a qualquer momento).
 4. **Listagem/ranking de mais votadas** — visão pública ordenada por número de votos.
 5. **Comentários** nas sugestões (thread de discussão por sugestão).
-6. **Categorias/módulos** cadastrados e mantidos dentro do próprio portal pela equipe interna.
+6. **Categorias/módulos** e **Produtos** (ERPs comercializados pela empresa — ex: AJORS.OOH, AJORS.SIGN) cadastrados e mantidos dentro do próprio portal pela equipe interna. Toda sugestão indica a qual produto se refere.
 7. **Notificações por e-mail** ao cliente quando houver mudanças relevantes na sugestão (ex: aprovação, rejeição, nova resposta/comentário da equipe).
 8. **Autenticação via SSO** com o ERP (mecanismo de token a definir com o time técnico do ERP).
 9. **Multi-tenant compartilhado**: sugestões e votos são visíveis e compartilhados entre todos os clientes/empresas que usam o ERP (portal único, não isolado por empresa).
@@ -54,7 +54,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 | Votar (até 3 ativos, com realocação) | ✅ | ❌* |
 | Comentar | ✅ | ✅ |
 | Moderar/excluir comentários | ❌ | ✅ |
-| Gerenciar categorias | ❌ | ✅ |
+| Gerenciar categorias e produtos (ERP) | ❌ | ✅ |
 | Ver ranking de mais votadas | ✅ | ✅ |
 
 \* Admin interno não computa votos de cliente; a definir se admin também poderá votar em nome da equipe de produto (ponto em aberto).
@@ -65,7 +65,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 - Toda sugestão nova entra com status **"Em moderação"** (não pública, não vota-se nela).
 - Admin interno aprova (→ **"Publicada"**) ou rejeita (→ **"Rejeitada"**, com justificativa opcional visível ao autor).
 - Sugestão publicada é visível a todos os clientes (multi-tenant compartilhado) e pode receber votos e comentários.
-- Campos mínimos: título, descrição, categoria, autor, empresa/cliente de origem, data de criação, status.
+- Campos mínimos: produto (ERP de origem), título, descrição, resultado esperado com a solicitação, categoria, autor, empresa/cliente de origem, data de criação, status. Todos obrigatórios no cadastro.
 
 ### 7.2 Votação
 - Cada usuário cliente tem no máximo **3 votos ativos simultâneos**, aplicáveis apenas a sugestões **publicadas e ainda não construídas/lançadas**.
@@ -77,17 +77,19 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 - Disponível apenas em sugestões publicadas.
 - Cliente e Admin podem comentar; Admin pode remover comentários (moderação reativa).
 
-### 7.4 Categorias
-- Mantidas exclusivamente dentro do portal pelo Admin interno (CRUD simples), sem sincronização com o ERP nesta fase.
+### 7.4 Categorias e Produtos
+- Mantidas exclusivamente dentro do portal pelo Admin interno (CRUD simples — incluir, renomear e desativar), sem sincronização com o ERP nesta fase.
+- **Produtos** representam os ERPs comercializados pela empresa (ex: AJORS.OOH, AJORS.SIGN) e são obrigatórios no cadastro de sugestão, junto com a categoria.
+- "Excluir" categoria/produto é, na prática, uma desativação (fica oculto do cadastro de novas sugestões, mas permanece visível/gerenciável pelo Admin) — exclusão física não é permitida enquanto houver sugestões vinculadas.
 
 ### 7.5 Notificações
-- Disparadas por e-mail ao autor da sugestão nos eventos: aprovação, rejeição, novo comentário (a validar se notifica em toda resposta ou apenas respostas do Admin, para evitar excesso de e-mails).
+- Disparadas por e-mail ao autor da sugestão nos eventos: aprovação, rejeição, e comentário feito pelo **Admin interno** (comentário de outro cliente não dispara notificação — decisão tomada para evitar excesso de e-mails, resolvendo o ponto em aberto #3 original).
 
 ## 8. Fluxos Principais
 
 **Fluxo 1 — Cliente cria sugestão**
 1. Cliente clica em "Portal de Sugestão" no ERP → abre nova aba autenticada via SSO.
-2. Cliente acessa "Nova sugestão", preenche título, descrição e categoria.
+2. Cliente acessa "Nova sugestão" (popup), preenche produto (ERP), título, descrição, resultado esperado e categoria.
 3. Sugestão entra como "Em moderação".
 4. Admin recebe (fila de moderação), aprova ou rejeita.
 5. Cliente é notificado por e-mail do resultado.
@@ -112,9 +114,10 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 
 ## 10. Modelo de Dados (entidades principais — visão preliminar)
 
-- **Usuario** (id, nome, email, empresa/cliente de origem, referência ao usuário do ERP)
-- **Sugestao** (id, titulo, descricao, categoriaId, autorId, status, dataCriacao, dataModeracao, motivoRejeicao)
+- **Usuario** (id, nome, email, empresa/cliente de origem, referência ao usuário do ERP, role)
+- **Sugestao** (id, produtoId, titulo, descricao, resultadoEsperado, categoriaId, autorId, status, dataCriacao, dataModeracao, motivoRejeicao, moderadorId)
 - **Categoria** (id, nome, ativo)
+- **Produto** (id, nome, ativo) — ERPs comercializados pela empresa (ex: AJORS.OOH, AJORS.SIGN)
 - **Voto** (id, sugestaoId, usuarioId, dataVoto)
 - **Comentario** (id, sugestaoId, usuarioId, texto, dataCriacao)
 - **NotificacaoLog** (id, usuarioId, tipo, sugestaoId, dataEnvio) — opcional, para auditoria de e-mails enviados
@@ -126,13 +129,15 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 - Interface responsiva (acesso via desktop, principal, mas navegável em mobile).
 - Tempo de carregamento do ranking de mais votadas deve ser rápido mesmo com grande volume de sugestões/votos (considerar cache/otimização de contagem de votos).
 
+> **Status (2026-08-01)**: testado com carga sintética de 5.000 sugestões/21.000 votos — identificado e corrigido um gargalo de N+1/materialização desnecessária no EF Core, e implementada paginação server-side no ranking (`GET /api/sugestoes`), eliminando o crescimento do payload com o volume de dados. Metodologia e números completos em `docs/performance-report.md`. Responsividade mobile ainda não foi especificamente testada/ajustada.
+
 ## 12. Pontos em Aberto
 
-1. **Mecanismo técnico de SSO** entre ERP e Portal (tipo de token, emissor, validação na API .NET) — definir com time técnico do ERP.
+1. **Mecanismo técnico de SSO** entre ERP e Portal (tipo de token, emissor, validação na API .NET) — definir com time técnico do ERP. **Ainda em aberto**: autenticação mock via JWT (`POST /api/auth/mock-login`) está em uso desde a Fase 1, simulando o SSO até a definição real (bloqueia a Fase 6).
 2. **Status de andamento (Kanban/roadmap público)**: hoje fora de escopo, mas é uma evolução natural após o MVP — vale revisitar após o portal estar em produção.
-3. Regras de e-mail: quais eventos exatos disparam notificação (todo comentário vs. apenas respostas do Admin).
-4. Se Admin interno também poderá votar (representando a equipe de produto) ou fica restrito a clientes.
-5. Política de duplicidade: como o Admin deve tratar sugestões duplicadas (mesclar votos ao unificar duas sugestões?).
+3. ~~Regras de e-mail: quais eventos exatos disparam notificação~~ — **Resolvido**: notifica apenas aprovação, rejeição e comentário feito pelo Admin interno; comentário de outro cliente não notifica (ver seção 7.5).
+4. Se Admin interno também poderá votar (representando a equipe de produto) ou fica restrito a clientes. **Implementado como restrito a clientes** (Admin não vota) — revisitar se a necessidade de a equipe de produto votar surgir.
+5. Política de duplicidade: como o Admin deve tratar sugestões duplicadas (mesclar votos ao unificar duas sugestões?). Ainda não implementado.
 
 ## 13. Métricas de Sucesso
 
@@ -145,11 +150,15 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 
 Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a **construção técnica** será feita de forma incremental, entregando valor testável a cada etapa. Cada fase pressupõe a anterior concluída.
 
+> **Status geral (atualizado em 2026-08-01)**: Fases 0 a 5 concluídas e validadas ponta a ponta; Fase 7 (testes funcionais, performance e paginação) concluída, restando apenas a validação com stakeholders/usuários-piloto; Fase 6 bloqueada pelo ponto em aberto #1 (SSO real). Repositório: https://github.com/resolveia/portal-sugestao (CI configurado — GitHub Actions roda a suíte completa de testes a cada push/PR pra `master`).
+
 ### Fase 0 — Definições e Preparação
 - Definir mecanismo técnico de SSO com o time do ERP (ponto em aberto #1).
 - Modelagem final do banco de dados (SQL Server) a partir da visão preliminar (seção 10).
 - Setup dos repositórios, pipelines de build/deploy e ambientes (dev/homologação).
 - Definição do contrato de API (endpoints REST) entre frontend Angular e backend .NET 8.
+
+**Status: ✅ Concluída.** Monorepo com backend .NET 8 (camadas Domain/Application/Infrastructure/Api/Tests) e frontend Angular 22 + DevExtreme. SSO real ainda não definido pelo time do ERP (ponto em aberto #1) — autenticação mock via JWT criada como substituto temporário (ver Fase 1). Contrato de API documentado em `docs/api-contract.md`.
 
 ### Fase 1 — Fundação (Autenticação e Cadastro Base)
 - Autenticação via SSO funcional (recebendo token/sessão do ERP e validando na API).
@@ -157,29 +166,41 @@ Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a
 - Cadastro de **Sugestões** pelo cliente (título, descrição, categoria), com status inicial "Em moderação".
 - Listagem simples de sugestões (sem ranking/votação ainda).
 
+**Status: ✅ Concluída** (com autenticação mock no lugar do SSO real — ponto em aberto #1). Cadastro de sugestão evoluiu além do previsto originalmente: ganhou os campos **Produto (ERP de origem)** e **Resultado esperado**, ambos obrigatórios (ver seções 5, 7.1 e 10). CRUD de Categorias e Produtos com edição (renomear) e desativação, além de criação — implementado como popup de cadastro no frontend.
+
 ### Fase 2 — Moderação
 - Fila de moderação para o Admin interno.
 - Aprovação (→ "Publicada") e rejeição (→ "Rejeitada", com justificativa).
 - Edição de sugestão pelo cliente antes da aprovação.
 - Auditoria básica de quem aprovou/rejeitou e quando (RNF seção 11).
 
+**Status: ✅ Concluída.**
+
 ### Fase 3 — Votação e Ranking
 - Votação em sugestões publicadas, com limite de 3 votos ativos por usuário.
 - Realocação de votos (remover de uma sugestão, aplicar em outra).
 - Ranking público ordenado por número de votos, com otimização/cache para performance (RNF seção 11).
 
+**Status: ✅ Concluída.** Otimização/paginação do ranking aprofundada na Fase 7 (ver abaixo) depois de testes de carga com grande volume de dados.
+
 ### Fase 4 — Comentários
 - Thread de comentários em sugestões publicadas.
 - Moderação reativa de comentários pelo Admin (remoção).
+
+**Status: ✅ Concluída.**
 
 ### Fase 5 — Notificações
 - Envio de e-mails ao autor nos eventos definidos (aprovação, rejeição, comentário — conforme resolução do ponto em aberto #3).
 - Registro opcional em `NotificacaoLog` para auditoria de envios.
 
+**Status: ✅ Concluída.** Envio via MailKit/SMTP (MailHog local em desenvolvimento); decisão tomada sobre o ponto em aberto #3 — notifica apenas comentário do Admin, não de outros clientes (ver seção 7.5). Falha no envio de e-mail não bloqueia a ação principal (aprovar/rejeitar/comentar).
+
 ### Fase 6 — Integração com o ERP
 - Botão "Portal de Sugestão" implementado dentro do ERP.
 - Abertura do portal em nova aba com SSO real (fim a fim, substituindo mocks de autenticação usados nas fases anteriores).
 - Testes de integração entre ERP e Portal em ambiente de homologação.
+
+**Status: ⏸ Bloqueada.** Depende da definição do mecanismo técnico de SSO com o time do ERP (ponto em aberto #1) — ainda não iniciada.
 
 ### Fase 7 — Testes, Performance e Homologação
 - Testes funcionais ponta a ponta dos fluxos principais (seção 8).
@@ -187,7 +208,11 @@ Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a
 - Ajustes de responsividade (desktop e mobile).
 - Validação com stakeholders/usuários-piloto.
 
+**Status: 🔶 Quase concluída.** Testes funcionais automatizados (suíte de integração no backend + testes unitários no frontend, CI configurado) e testes de carga/performance na listagem concluídos — ver `docs/performance-report.md` para metodologia e resultados (identificado e corrigido gargalo de query no EF Core, e implementada paginação server-side no ranking). Pendente: ajustes específicos de responsividade mobile e validação com stakeholders/usuários-piloto (esta última depende de pessoas fora da equipe técnica).
+
 ### Fase 8 — Lançamento (Go-live) e Acompanhamento
 - Publicação em produção e liberação do botão no ERP para todos os clientes.
 - Acompanhamento das métricas de sucesso (seção 13) nas primeiras semanas.
 - Coleta de feedback para priorizar evoluções futuras (ex: status tipo Kanban/roadmap público, ponto em aberto #2).
+
+**Status: ⏳ Não iniciada.** Depende da Fase 6 (SSO real) e de decisão de hospedagem/CI-CD para produção, ainda não discutida.
