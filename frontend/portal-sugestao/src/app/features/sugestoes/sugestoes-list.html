@@ -13,9 +13,12 @@
 
   <section class="card">
     <dx-data-grid
-      [dataSource]="sugestoes()"
+      [dataSource]="sugestoesDataSource"
       [showBorders]="true"
       [columnAutoWidth]="true"
+      [remoteOperations]="{ paging: true }"
+      [paging]="{ pageSize: 20 }"
+      [pager]="{ visible: true, showPageSizeSelector: true, allowedPageSizes: [10, 20, 50], showInfo: true }"
       [masterDetail]="{ enabled: true, template: 'comentariosTemplate' }"
     >
       <dxi-column dataField="produtoNome" caption="Produto"></dxi-column>

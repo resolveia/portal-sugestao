@@ -92,8 +92,18 @@ Renomeia um produto. Requer role `AdminInterno`. Mesmo corpo do `POST`.
 
 ## Sugestões
 
-### `GET /api/sugestoes`
-Lista sugestões **publicadas**, ordenadas por total de votos (ranking). Requer autenticação.
+### `GET /api/sugestoes?skip=0&take=20`
+Lista sugestões **publicadas**, ordenadas por total de votos (ranking). Requer autenticação. **Paginado no servidor** (RNF seção 11 — ver `docs/performance-report.md`): `skip` (padrão `0`) e `take` (padrão `20`, máximo `100`) são opcionais.
+
+**Response**
+```json
+{
+  "items": [ /* SugestaoDto[] da página atual */ ],
+  "total": 137,
+  "votosUsadosPeloUsuarioAtual": 2
+}
+```
+`votosUsadosPeloUsuarioAtual` é o total de votos ativos do usuário autenticado (regra 7.2) — vem à parte porque o limite de 3 é sobre o total, não sobre a página atual, então o frontend não pode mais somar `votadoPorMim` só dos itens carregados.
 
 ### `POST /api/sugestoes`
 Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1 do PRD). Requer autenticação. `produtoId`, `titulo`, `descricao`, `resultadoEsperado` e `categoriaId` são obrigatórios.
@@ -153,7 +163,7 @@ Remove o voto do usuário autenticado nessa sugestão — é assim que se faz a 
 
 **Respostas de erro**: `404` (sugestão não existe, ou usuário não tinha voto nela).
 
-> Todas as respostas de `SugestaoDto` (listagem, criação, edição, moderação, voto) incluem `votadoPorMim: bool`, indicando se o usuário autenticado já votou naquela sugestão — o frontend soma esses `true` para saber quantos dos 3 votos já foram usados, sem precisar de outro endpoint.
+> Todas as respostas de `SugestaoDto` (listagem, criação, edição, moderação, voto) incluem `votadoPorMim: bool`, indicando se o usuário autenticado já votou naquela sugestão. O total de votos usados pelo usuário (pro limite de 3) vem em `votosUsadosPeloUsuarioAtual`, na resposta paginada de `GET /api/sugestoes`.
 
 ## Comentários
 

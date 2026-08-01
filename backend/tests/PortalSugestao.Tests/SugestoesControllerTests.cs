@@ -69,11 +69,37 @@ public class SugestoesControllerTests
         await admin.PutAsync($"/api/sugestoes/{idPublicada}/aprovar", null);
 
         var response = await cliente.GetAsync("/api/sugestoes");
-        var lista = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var ids = lista.EnumerateArray().Select(s => s.GetProperty("id").GetInt32()).ToList();
+        var pagina = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var ids = pagina.GetProperty("items").EnumerateArray().Select(s => s.GetProperty("id").GetInt32()).ToList();
 
         Assert.Contains(idPublicada, ids);
         Assert.DoesNotContain(idNaoPublicada, ids);
+    }
+
+    [Fact]
+    public async Task Listar_RespeitaSkipETakeERetornaTotal()
+    {
+        await using var factory = new CustomWebApplicationFactory();
+        var admin = await factory.CreateAuthenticatedClientAsync("admin.sug6@empresa.com", "Admin", "Empresa", "AdminInterno");
+        var categoriaId = await admin.CriarCategoriaAsync();
+        var cliente = await factory.CreateAuthenticatedClientAsync("cliente.sug6@empresa.com", "Cliente", "Empresa", "Cliente");
+
+        for (var i = 0; i < 5; i++)
+        {
+            var id = await cliente.CriarSugestaoAsync(categoriaId, $"Paginada {i}");
+            await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        }
+
+        var pagina1 = await (await cliente.GetAsync("/api/sugestoes?skip=0&take=2")).Content.ReadFromJsonAsync<JsonElement>();
+        var pagina2 = await (await cliente.GetAsync("/api/sugestoes?skip=2&take=2")).Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(2, pagina1.GetProperty("items").GetArrayLength());
+        Assert.Equal(2, pagina2.GetProperty("items").GetArrayLength());
+        Assert.True(pagina1.GetProperty("total").GetInt32() >= 5);
+
+        var idsPagina1 = pagina1.GetProperty("items").EnumerateArray().Select(s => s.GetProperty("id").GetInt32()).ToList();
+        var idsPagina2 = pagina2.GetProperty("items").EnumerateArray().Select(s => s.GetProperty("id").GetInt32()).ToList();
+        Assert.Empty(idsPagina1.Intersect(idsPagina2));
     }
 
     [Fact]

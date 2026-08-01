@@ -2,14 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Categoria, CreateSugestaoRequest, Produto, RejeitarRequest, Sugestao } from '../models/sugestao.model';
+import { Categoria, CreateSugestaoRequest, Produto, RejeitarRequest, Sugestao, SugestoesPaginadas } from '../models/sugestao.model';
 
 @Injectable({ providedIn: 'root' })
 export class SugestoesService {
   constructor(private readonly http: HttpClient) {}
 
-  listar(): Observable<Sugestao[]> {
-    return this.http.get<Sugestao[]>(`${environment.apiUrl}/sugestoes`);
+  listarPaginado(skip: number, take: number): Observable<SugestoesPaginadas> {
+    return this.http.get<SugestoesPaginadas>(`${environment.apiUrl}/sugestoes`, { params: { skip, take } });
   }
 
   listarPendentes(): Observable<Sugestao[]> {

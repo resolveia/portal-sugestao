@@ -16,6 +16,7 @@ namespace PortalSugestao.Api.Controllers;
 public class SugestoesController : ControllerBase
 {
     private const int LimiteVotosPorUsuario = 3;
+    private const int TamanhoPaginaMaximo = 100;
 
     private readonly PortalSugestaoDbContext _db;
     private readonly NotificacaoService _notificacaoService;
@@ -28,19 +29,28 @@ public class SugestoesController : ControllerBase
 
     /// <summary>
     /// Lista sugestões publicadas, ordenadas por número de votos (ranking — seção 5.4 do PRD).
-    /// Projeta direto pro DTO (sem Include de Votos) pra evitar materializar toda a coleção de votos
-    /// em memória — com grande volume de sugestões/votos isso gerava um JOIN gigante e tracking
-    /// desnecessário (RNF seção 11: performance do ranking com grande volume).
+    /// Paginado no servidor (RNF seção 11 — ver docs/performance-report.md: sem paginação, o payload
+    /// cresce com o total de sugestões publicadas e vira o próximo gargalo depois da otimização de
+    /// query). VotosUsadosPeloUsuarioAtual vem à parte do total de votos ativos do usuário (regra 7.2),
+    /// já que o limite de 3 é sobre o total, não sobre a página atual.
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<SugestaoDto>>> Listar()
+    public async Task<ActionResult<SugestoesPaginadasDto>> Listar(int skip = 0, int take = 20)
     {
         var currentUserId = CurrentUserId();
+        skip = Math.Max(0, skip);
+        take = Math.Clamp(take, 1, TamanhoPaginaMaximo);
 
-        var sugestoes = await _db.Sugestoes
+        var query = _db.Sugestoes
             .AsNoTracking()
-            .Where(s => s.Status == StatusSugestao.Publicada)
+            .Where(s => s.Status == StatusSugestao.Publicada);
+
+        var total = await query.CountAsync();
+
+        var sugestoes = await query
             .OrderByDescending(s => s.Votos.Count)
+            .Skip(skip)
+            .Take(take)
             .Select(s => new SugestaoDto(
                 s.Id,
                 s.Titulo,
@@ -61,7 +71,9 @@ public class SugestoesController : ControllerBase
                 s.Moderador == null ? null : s.Moderador.Nome))
             .ToListAsync();
 
-        return Ok(sugestoes);
+        var votosUsados = await _db.Votos.CountAsync(v => v.UsuarioId == currentUserId);
+
+        return Ok(new SugestoesPaginadasDto(sugestoes, total, votosUsados));
     }
 
     /// <summary>

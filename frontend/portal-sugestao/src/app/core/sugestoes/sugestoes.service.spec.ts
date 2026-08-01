@@ -18,11 +18,11 @@ describe('SugestoesService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('listar() faz GET em /sugestoes', () => {
-    service.listar().subscribe();
-    const req = httpMock.expectOne(`${environment.apiUrl}/sugestoes`);
+  it('listarPaginado() faz GET em /sugestoes com skip e take', () => {
+    service.listarPaginado(20, 10).subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/sugestoes?skip=20&take=10`);
     expect(req.request.method).toBe('GET');
-    req.flush([]);
+    req.flush({ items: [], total: 0, votosUsadosPeloUsuarioAtual: 0 });
   });
 
   it('listarPendentes() faz GET em /sugestoes/pendentes', () => {

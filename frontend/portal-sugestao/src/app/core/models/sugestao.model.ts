@@ -20,6 +20,12 @@ export interface Sugestao {
   moderadorNome?: string | null;
 }
 
+export interface SugestoesPaginadas {
+  items: Sugestao[];
+  total: number;
+  votosUsadosPeloUsuarioAtual: number;
+}
+
 export interface CreateSugestaoRequest {
   produtoId: number;
   titulo: string;

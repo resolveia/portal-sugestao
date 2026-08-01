@@ -26,10 +26,11 @@ public class VotosControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var ranking = await (await cliente.GetAsync("/api/sugestoes")).Content.ReadFromJsonAsync<JsonElement>();
-        var item = ranking.EnumerateArray().First(s => s.GetProperty("id").GetInt32() == id);
+        var item = ranking.GetProperty("items").EnumerateArray().First(s => s.GetProperty("id").GetInt32() == id);
 
         Assert.Equal(1, item.GetProperty("totalVotos").GetInt32());
         Assert.True(item.GetProperty("votadoPorMim").GetBoolean());
+        Assert.Equal(1, ranking.GetProperty("votosUsadosPeloUsuarioAtual").GetInt32());
     }
 
     [Fact]

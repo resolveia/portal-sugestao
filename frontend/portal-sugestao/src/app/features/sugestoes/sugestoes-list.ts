@@ -1,12 +1,16 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { DxDataGridModule, DxTemplateModule } from 'devextreme-angular';
 import { DxTextBoxModule, DxSelectBoxModule, DxButtonModule, DxPopupModule } from 'devextreme-angular';
+import CustomStore from 'devextreme/data/custom_store';
+import DataSource from 'devextreme/data/data_source';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
-import { Categoria, Produto, Sugestao } from '../../core/models/sugestao.model';
+import { Categoria, Produto } from '../../core/models/sugestao.model';
 import { Comentarios } from './comentarios/comentarios';
 
 const LIMITE_VOTOS = 3;
+const TAMANHO_PAGINA = 20;
 
 @Component({
   selector: 'app-sugestoes-list',
@@ -16,16 +20,41 @@ const LIMITE_VOTOS = 3;
   styleUrl: './sugestoes-list.scss'
 })
 export class SugestoesList implements OnInit {
-  readonly sugestoes = signal<Sugestao[]>([]);
   readonly categorias = signal<Categoria[]>([]);
   readonly produtos = signal<Produto[]>([]);
   readonly erro = signal<string | null>(null);
 
   readonly limiteVotos = LIMITE_VOTOS;
-  readonly votosUsados = computed(() => this.sugestoes().filter((s) => s.votadoPorMim).length);
+  // Vem do servidor a cada carregamento de página — o limite de 3 votos é sobre o total do
+  // usuário, não sobre os itens da página atual (por isso não dá pra somar votadoPorMim aqui).
+  readonly votosUsados = signal(0);
   readonly votosDisponiveis = computed(() => this.limiteVotos - this.votosUsados());
 
   readonly mostrarNovaSugestao = signal(false);
+
+  // Paginação server-side (RNF seção 11 — docs/performance-report.md): a grid busca só a
+  // página atual via CustomStore, em vez de carregar todas as sugestões publicadas de uma vez.
+  readonly sugestoesDataSource = new DataSource({
+    store: new CustomStore({
+      key: 'id',
+      load: (loadOptions) => {
+        const skip = loadOptions.skip ?? 0;
+        const take = loadOptions.take ?? TAMANHO_PAGINA;
+        return firstValueFrom(this.sugestoesService.listarPaginado(skip, take))
+          .then((resposta) => {
+            this.votosUsados.set(resposta.votosUsadosPeloUsuarioAtual);
+            this.erro.set(null);
+            return { data: resposta.items, totalCount: resposta.total };
+          })
+          .catch((erro) => {
+            this.erro.set('Não foi possível carregar as sugestões.');
+            throw erro;
+          });
+      }
+    }),
+    paginate: true,
+    pageSize: TAMANHO_PAGINA
+  });
 
   novoProdutoId: number | null = null;
   novoTitulo = '';
@@ -39,15 +68,10 @@ export class SugestoesList implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.carregar();
+    this.carregarReferencias();
   }
 
-  carregar(): void {
-    this.sugestoesService.listar().subscribe({
-      next: (dados) => this.sugestoes.set(dados),
-      error: () => this.erro.set('Não foi possível carregar as sugestões.')
-    });
-
+  carregarReferencias(): void {
     this.sugestoesService.listarCategorias().subscribe({
       next: (dados) => this.categorias.set(dados),
       error: () => this.erro.set('Não foi possível carregar as categorias.')
@@ -92,7 +116,7 @@ export class SugestoesList implements OnInit {
     this.sugestoesService.votar(id).subscribe({
       next: () => {
         this.erro.set(null);
-        this.carregar();
+        this.sugestoesDataSource.reload();
       },
       error: () => this.erro.set('Não foi possível registrar o voto.')
     });
@@ -102,7 +126,7 @@ export class SugestoesList implements OnInit {
     this.sugestoesService.removerVoto(id).subscribe({
       next: () => {
         this.erro.set(null);
-        this.carregar();
+        this.sugestoesDataSource.reload();
       },
       error: () => this.erro.set('Não foi possível remover o voto.')
     });
