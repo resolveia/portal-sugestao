@@ -1,6 +1,7 @@
 <div class="categorias-page">
   <div class="page-title">
     <h1>Categorias</h1>
+    <dx-button class="btn-nova-categoria" text="Nova categoria" type="default" icon="plus" (onClick)="mostrarNovaCategoria.set(true)"></dx-button>
   </div>
 
   @if (erro()) {
@@ -32,12 +33,21 @@
     </dx-data-grid>
   </section>
 
-  <section class="card nova-categoria">
-    <h2>Nova categoria</h2>
-    <div class="campo">
-      <label>Nome *</label>
-      <dx-text-box [(value)]="novoNome" placeholder="Ex: Financeiro"></dx-text-box>
+  <dx-popup
+    [(visible)]="mostrarNovaCategoria"
+    title="Nova categoria"
+    [width]="400"
+    height="auto"
+    [showCloseButton]="true"
+    [dragEnabled]="false"
+    [hideOnOutsideClick]="true"
+  >
+    <div class="nova-categoria">
+      <div class="campo">
+        <label>Nome *</label>
+        <dx-text-box [(value)]="novoNome" placeholder="Ex: Financeiro"></dx-text-box>
+      </div>
+      <dx-button text="Criar categoria" type="default" (onClick)="criarCategoria()"></dx-button>
     </div>
-    <dx-button text="Criar categoria" type="default" (onClick)="criarCategoria()"></dx-button>
-  </section>
+  </dx-popup>
 </div>

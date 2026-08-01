@@ -1,12 +1,12 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxButtonModule } from 'devextreme-angular';
+import { DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxButtonModule, DxPopupModule } from 'devextreme-angular';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
 import { Categoria } from '../../core/models/sugestao.model';
 
 @Component({
   selector: 'app-categorias-list',
   standalone: true,
-  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxButtonModule],
+  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxButtonModule, DxPopupModule],
   templateUrl: './categorias-list.html',
   styleUrl: './categorias-list.scss'
 })
@@ -14,6 +14,7 @@ export class CategoriasList implements OnInit {
   readonly categorias = signal<Categoria[]>([]);
   readonly erro = signal<string | null>(null);
   readonly editandoId = signal<number | null>(null);
+  readonly mostrarNovaCategoria = signal(false);
   novoNome = '';
   nomeEditado = '';
 
@@ -40,6 +41,7 @@ export class CategoriasList implements OnInit {
       next: () => {
         this.novoNome = '';
         this.erro.set(null);
+        this.mostrarNovaCategoria.set(false);
         this.carregar();
       },
       error: () => this.erro.set('Não foi possível criar a categoria.')

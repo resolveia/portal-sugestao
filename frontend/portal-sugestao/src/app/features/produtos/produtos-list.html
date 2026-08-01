@@ -1,6 +1,7 @@
 <div class="produtos-page">
   <div class="page-title">
     <h1>Produtos</h1>
+    <dx-button class="btn-novo-produto" text="Novo produto" type="default" icon="plus" (onClick)="mostrarNovoProduto.set(true)"></dx-button>
   </div>
 
   @if (erro()) {
@@ -32,12 +33,21 @@
     </dx-data-grid>
   </section>
 
-  <section class="card novo-produto">
-    <h2>Novo produto</h2>
-    <div class="campo">
-      <label>Nome *</label>
-      <dx-text-box [(value)]="novoNome" placeholder="Ex: AJORS.CRM"></dx-text-box>
+  <dx-popup
+    [(visible)]="mostrarNovoProduto"
+    title="Novo produto"
+    [width]="400"
+    height="auto"
+    [showCloseButton]="true"
+    [dragEnabled]="false"
+    [hideOnOutsideClick]="true"
+  >
+    <div class="novo-produto">
+      <div class="campo">
+        <label>Nome *</label>
+        <dx-text-box [(value)]="novoNome" placeholder="Ex: AJORS.CRM"></dx-text-box>
+      </div>
+      <dx-button text="Criar produto" type="default" (onClick)="criarProduto()"></dx-button>
     </div>
-    <dx-button text="Criar produto" type="default" (onClick)="criarProduto()"></dx-button>
-  </section>
+  </dx-popup>
 </div>
