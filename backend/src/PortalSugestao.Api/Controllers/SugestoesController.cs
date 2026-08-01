@@ -28,6 +28,9 @@ public class SugestoesController : ControllerBase
 
     /// <summary>
     /// Lista sugestões publicadas, ordenadas por número de votos (ranking — seção 5.4 do PRD).
+    /// Projeta direto pro DTO (sem Include de Votos) pra evitar materializar toda a coleção de votos
+    /// em memória — com grande volume de sugestões/votos isso gerava um JOIN gigante e tracking
+    /// desnecessário (RNF seção 11: performance do ranking com grande volume).
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SugestaoDto>>> Listar()
@@ -35,15 +38,30 @@ public class SugestoesController : ControllerBase
         var currentUserId = CurrentUserId();
 
         var sugestoes = await _db.Sugestoes
+            .AsNoTracking()
             .Where(s => s.Status == StatusSugestao.Publicada)
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
             .OrderByDescending(s => s.Votos.Count)
+            .Select(s => new SugestaoDto(
+                s.Id,
+                s.Titulo,
+                s.Descricao,
+                s.ResultadoEsperado,
+                s.ProdutoId,
+                s.Produto!.Nome,
+                s.CategoriaId,
+                s.Categoria!.Nome,
+                s.AutorId,
+                s.Autor!.Nome,
+                s.Status,
+                s.DataCriacao,
+                s.Votos.Count,
+                s.Votos.Any(v => v.UsuarioId == currentUserId),
+                s.DataModeracao,
+                s.MotivoRejeicao,
+                s.Moderador == null ? null : s.Moderador.Nome))
             .ToListAsync();
 
-        return Ok(sugestoes.Select(s => ToDto(s, currentUserId)));
+        return Ok(sugestoes);
     }
 
     /// <summary>
@@ -56,15 +74,30 @@ public class SugestoesController : ControllerBase
         var currentUserId = CurrentUserId();
 
         var sugestoes = await _db.Sugestoes
+            .AsNoTracking()
             .Where(s => s.Status == StatusSugestao.EmModeracao)
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
             .OrderBy(s => s.DataCriacao)
+            .Select(s => new SugestaoDto(
+                s.Id,
+                s.Titulo,
+                s.Descricao,
+                s.ResultadoEsperado,
+                s.ProdutoId,
+                s.Produto!.Nome,
+                s.CategoriaId,
+                s.Categoria!.Nome,
+                s.AutorId,
+                s.Autor!.Nome,
+                s.Status,
+                s.DataCriacao,
+                s.Votos.Count,
+                s.Votos.Any(v => v.UsuarioId == currentUserId),
+                s.DataModeracao,
+                s.MotivoRejeicao,
+                s.Moderador == null ? null : s.Moderador.Nome))
             .ToListAsync();
 
-        return Ok(sugestoes.Select(s => ToDto(s, currentUserId)));
+        return Ok(sugestoes);
     }
 
     /// <summary>

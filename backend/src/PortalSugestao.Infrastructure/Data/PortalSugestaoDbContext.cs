@@ -52,6 +52,9 @@ public class PortalSugestaoDbContext : DbContext
             entity.Property(s => s.Descricao).HasMaxLength(4000).IsRequired();
             entity.Property(s => s.ResultadoEsperado).HasMaxLength(2000).IsRequired();
 
+            // Ranking/moderação filtram por Status a cada listagem (RNF seção 11 — performance com grande volume).
+            entity.HasIndex(s => s.Status);
+
             entity.HasOne(s => s.Produto)
                 .WithMany(p => p.Sugestoes)
                 .HasForeignKey(s => s.ProdutoId)
