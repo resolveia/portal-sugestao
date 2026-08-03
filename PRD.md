@@ -129,7 +129,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 - Interface responsiva (acesso via desktop, principal, mas navegável em mobile).
 - Tempo de carregamento do ranking de mais votadas deve ser rápido mesmo com grande volume de sugestões/votos (considerar cache/otimização de contagem de votos).
 
-> **Status (2026-08-01)**: testado com carga sintética de 5.000 sugestões/21.000 votos — identificado e corrigido um gargalo de N+1/materialização desnecessária no EF Core, e implementada paginação server-side no ranking (`GET /api/sugestoes`), eliminando o crescimento do payload com o volume de dados. Metodologia e números completos em `docs/performance-report.md`. Responsividade mobile ainda não foi especificamente testada/ajustada.
+> **Status (2026-08-03)**: testado com carga sintética de 5.000 sugestões/21.000 votos — identificado e corrigido um gargalo de N+1/materialização desnecessária no EF Core, e implementada paginação server-side no ranking (`GET /api/sugestoes`), eliminando o crescimento do payload com o volume de dados. Metodologia e números completos em `docs/performance-report.md`. Responsividade mobile também ajustada e validada (menu hamburguer abaixo de 860px, popups com largura fluida) — sem scroll horizontal da página em nenhuma tela.
 
 ## 12. Pontos em Aberto
 
@@ -150,7 +150,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 
 Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a **construção técnica** será feita de forma incremental, entregando valor testável a cada etapa. Cada fase pressupõe a anterior concluída.
 
-> **Status geral (atualizado em 2026-08-01)**: Fases 0 a 5 concluídas e validadas ponta a ponta; Fase 7 (testes funcionais, performance e paginação) concluída, restando apenas a validação com stakeholders/usuários-piloto; Fase 6 bloqueada pelo ponto em aberto #1 (SSO real). Repositório: https://github.com/resolveia/portal-sugestao (CI configurado — GitHub Actions roda a suíte completa de testes a cada push/PR pra `master`).
+> **Status geral (atualizado em 2026-08-03)**: Fases 0 a 5 concluídas e validadas ponta a ponta; Fase 7 (testes funcionais, performance, paginação e responsividade mobile) concluída, restando apenas a validação com stakeholders/usuários-piloto; Fase 6 bloqueada pelo ponto em aberto #1 (SSO real). Repositório: https://github.com/resolveia/portal-sugestao (CI configurado — GitHub Actions roda a suíte completa de testes a cada push/PR pra `master`).
 
 ### Fase 0 — Definições e Preparação
 - Definir mecanismo técnico de SSO com o time do ERP (ponto em aberto #1).
@@ -208,7 +208,7 @@ Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a
 - Ajustes de responsividade (desktop e mobile).
 - Validação com stakeholders/usuários-piloto.
 
-**Status: 🔶 Quase concluída.** Testes funcionais automatizados (suíte de integração no backend + testes unitários no frontend, CI configurado) e testes de carga/performance na listagem concluídos — ver `docs/performance-report.md` para metodologia e resultados (identificado e corrigido gargalo de query no EF Core, e implementada paginação server-side no ranking). Pendente: ajustes específicos de responsividade mobile e validação com stakeholders/usuários-piloto (esta última depende de pessoas fora da equipe técnica).
+**Status: 🔶 Quase concluída.** Testes funcionais automatizados (suíte de integração no backend + testes unitários no frontend, CI configurado), testes de carga/performance na listagem (`docs/performance-report.md` — gargalo de query no EF Core corrigido, paginação server-side implementada) e ajustes de responsividade mobile (menu hamburguer abaixo de 860px, popups com largura fluida, validado sem scroll horizontal em nenhuma tela) concluídos. Pendente apenas: validação com stakeholders/usuários-piloto (depende de pessoas fora da equipe técnica).
 
 ### Fase 8 — Lançamento (Go-live) e Acompanhamento
 - Publicação em produção e liberação do botão no ERP para todos os clientes.
