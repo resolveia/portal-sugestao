@@ -1,20 +1,33 @@
 <div class="app-shell">
   <header class="app-header">
-    <a routerLink="/sugestoes" class="brand">Portal de Sugestões</a>
+    <a routerLink="/sugestoes" class="brand" (click)="fecharMenu()">Portal de Sugestões</a>
 
-    <nav class="app-nav">
-      <a routerLink="/sugestoes" routerLinkActive="active">Sugestões</a>
-      @if (authService.usuario()?.role === 'AdminInterno') {
-        <a routerLink="/moderacao" routerLinkActive="active">Moderação</a>
-        <a routerLink="/categorias" routerLinkActive="active">Categorias</a>
-        <a routerLink="/produtos" routerLinkActive="active">Produtos</a>
-      }
-    </nav>
+    <button
+      class="menu-toggle"
+      type="button"
+      [class.aberto]="menuAberto()"
+      [attr.aria-expanded]="menuAberto()"
+      aria-label="Abrir menu"
+      (click)="menuAberto.set(!menuAberto())"
+    >
+      <span></span><span></span><span></span>
+    </button>
 
-    <div class="app-user">
-      <span class="nome">{{ authService.usuario()?.nome }}</span>
-      <span class="badge">{{ authService.usuario()?.role }}</span>
-      <dx-button text="Sair" (onClick)="sair()"></dx-button>
+    <div class="app-menu" [class.aberto]="menuAberto()">
+      <nav class="app-nav">
+        <a routerLink="/sugestoes" routerLinkActive="active" (click)="fecharMenu()">Sugestões</a>
+        @if (authService.usuario()?.role === 'AdminInterno') {
+          <a routerLink="/moderacao" routerLinkActive="active" (click)="fecharMenu()">Moderação</a>
+          <a routerLink="/categorias" routerLinkActive="active" (click)="fecharMenu()">Categorias</a>
+          <a routerLink="/produtos" routerLinkActive="active" (click)="fecharMenu()">Produtos</a>
+        }
+      </nav>
+
+      <div class="app-user">
+        <span class="nome">{{ authService.usuario()?.nome }}</span>
+        <span class="badge">{{ authService.usuario()?.role }}</span>
+        <dx-button text="Sair" (onClick)="sair()"></dx-button>
+      </div>
     </div>
   </header>
 
