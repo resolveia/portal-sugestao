@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Categoria, CreateSugestaoRequest, Produto, RejeitarRequest, Sugestao, SugestoesPaginadas } from '../models/sugestao.model';
+import { Categoria, CreateSugestaoRequest, EstagioRoadmap, Produto, RejeitarRequest, Sugestao, SugestoesPaginadas } from '../models/sugestao.model';
 
 @Injectable({ providedIn: 'root' })
 export class SugestoesService {
@@ -39,6 +39,10 @@ export class SugestoesService {
 
   removerVoto(id: number): Observable<Sugestao> {
     return this.http.delete<Sugestao>(`${environment.apiUrl}/sugestoes/${id}/votos`);
+  }
+
+  atualizarEstagioRoadmap(id: number, estagio: EstagioRoadmap): Observable<Sugestao> {
+    return this.http.put<Sugestao>(`${environment.apiUrl}/sugestoes/${id}/roadmap`, { estagio });
   }
 
   listarCategorias(): Observable<Categoria[]> {

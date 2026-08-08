@@ -15,6 +15,7 @@ public class Sugestao
     public int AutorId { get; set; }
     public Usuario? Autor { get; set; }
     public StatusSugestao Status { get; set; } = StatusSugestao.EmModeracao;
+    public EstagioRoadmap? EstagioRoadmap { get; set; }
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
     public DateTime? DataModeracao { get; set; }
     public string? MotivoRejeicao { get; set; }

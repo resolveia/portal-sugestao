@@ -25,15 +25,26 @@
       <dxi-column dataField="titulo" caption="Título"></dxi-column>
       <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
       <dxi-column dataField="autorNome" caption="Autor"></dxi-column>
+      <dxi-column caption="Estágio" cellTemplate="estagioTemplate" [width]="160"></dxi-column>
       <dxi-column dataField="totalVotos" caption="Votos" [width]="90"></dxi-column>
       <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date" [format]="'dd/MM/yyyy'"></dxi-column>
       @if (authService.usuario()?.role === 'Cliente') {
         <dxi-column caption="Ação" cellTemplate="votoTemplate" [width]="160"></dxi-column>
       }
 
+      <div *dxTemplate="let row of 'estagioTemplate'">
+        @if (row.data.estagioRoadmap) {
+          <span class="estagio-badge" [ngClass]="estagioClasse(row.data.estagioRoadmap)">{{ estagioLabel(row.data.estagioRoadmap) }}</span>
+        } @else {
+          <span class="sem-estagio">—</span>
+        }
+      </div>
+
       <div *dxTemplate="let row of 'votoTemplate'">
         @if (row.data.votadoPorMim) {
           <dx-button text="Remover voto" type="danger" (onClick)="removerVoto(row.data.id)"></dx-button>
+        } @else if (row.data.estagioRoadmap === 'Lancado') {
+          <dx-button text="Já lançada" type="normal" [disabled]="true"></dx-button>
         } @else {
           <dx-button
             text="Votar"

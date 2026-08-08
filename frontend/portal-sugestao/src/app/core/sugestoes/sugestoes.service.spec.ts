@@ -79,6 +79,14 @@ describe('SugestoesService', () => {
     req.flush({});
   });
 
+  it('atualizarEstagioRoadmap() faz PUT em /sugestoes/{id}/roadmap com o estagio', () => {
+    service.atualizarEstagioRoadmap(5, 'Planejado').subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/sugestoes/5/roadmap`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ estagio: 'Planejado' });
+    req.flush({});
+  });
+
   it('listarCategorias() faz GET em /categorias', () => {
     service.listarCategorias().subscribe();
     const req = httpMock.expectOne(`${environment.apiUrl}/categorias`);

@@ -4,5 +4,6 @@ public enum TipoNotificacao
 {
     SugestaoAprovada = 0,
     SugestaoRejeitada = 1,
-    NovoComentario = 2
+    NovoComentario = 2,
+    SugestaoLancada = 3
 }

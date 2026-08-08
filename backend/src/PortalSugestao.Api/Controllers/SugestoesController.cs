@@ -63,6 +63,7 @@ public class SugestoesController : ControllerBase
                 s.AutorId,
                 s.Autor!.Nome,
                 s.Status,
+                s.EstagioRoadmap,
                 s.DataCriacao,
                 s.Votos.Count,
                 s.Votos.Any(v => v.UsuarioId == currentUserId),
@@ -101,6 +102,7 @@ public class SugestoesController : ControllerBase
                 s.AutorId,
                 s.Autor!.Nome,
                 s.Status,
+                s.EstagioRoadmap,
                 s.DataCriacao,
                 s.Votos.Count,
                 s.Votos.Any(v => v.UsuarioId == currentUserId),
@@ -305,6 +307,46 @@ public class SugestoesController : ControllerBase
     }
 
     /// <summary>
+    /// Define o estágio de roadmap (Em análise/Planejado/Em desenvolvimento/Lançado) de uma sugestão
+    /// já publicada — status de andamento público (PRD, ponto em aberto #2). Notifica o autor por
+    /// e-mail só na transição pra "Lançado" (evita ruído a cada mudança de estágio intermediária).
+    /// </summary>
+    [HttpPut("{id}/roadmap")]
+    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
+    public async Task<ActionResult<SugestaoDto>> AtualizarEstagioRoadmap(int id, AtualizarEstagioRoadmapRequest request)
+    {
+        var currentUserId = CurrentUserId();
+
+        var sugestao = await _db.Sugestoes
+            .Include(s => s.Produto)
+            .Include(s => s.Categoria)
+            .Include(s => s.Autor)
+            .Include(s => s.Votos)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (sugestao is null)
+        {
+            return NotFound();
+        }
+
+        if (sugestao.Status != StatusSugestao.Publicada)
+        {
+            return Conflict("Só é possível definir o estágio de roadmap de sugestões publicadas.");
+        }
+
+        var estagioAnterior = sugestao.EstagioRoadmap;
+        sugestao.EstagioRoadmap = request.Estagio;
+        await _db.SaveChangesAsync();
+
+        if (request.Estagio == EstagioRoadmap.Lancado && estagioAnterior != EstagioRoadmap.Lancado)
+        {
+            await _notificacaoService.NotificarAsync(sugestao.Autor!, TipoNotificacao.SugestaoLancada, sugestao);
+        }
+
+        return Ok(ToDto(sugestao, currentUserId));
+    }
+
+    /// <summary>
     /// Vota em uma sugestão publicada. Limite de 3 votos ativos por cliente, um voto por sugestão (regra 7.2 do PRD).
     /// </summary>
     [HttpPost("{id}/votos")]
@@ -328,6 +370,11 @@ public class SugestoesController : ControllerBase
         if (sugestao.Status != StatusSugestao.Publicada)
         {
             return Conflict("Só é possível votar em sugestões publicadas.");
+        }
+
+        if (sugestao.EstagioRoadmap == EstagioRoadmap.Lancado)
+        {
+            return Conflict("Esta sugestão já foi lançada e não aceita mais votos.");
         }
 
         if (sugestao.Votos.Any(v => v.UsuarioId == currentUserId))
@@ -398,6 +445,7 @@ public class SugestoesController : ControllerBase
         s.AutorId,
         s.Autor!.Nome,
         s.Status,
+        s.EstagioRoadmap,
         s.DataCriacao,
         s.Votos.Count,
         s.Votos.Any(v => v.UsuarioId == currentUserId),

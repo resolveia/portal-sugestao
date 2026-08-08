@@ -61,6 +61,9 @@ public class NotificacaoService
         TipoNotificacao.NovoComentario => (
             $"Nova resposta em \"{sugestao.Titulo}\"",
             $"A equipe respondeu à sua sugestão \"{sugestao.Titulo}\". Acesse o Portal de Sugestões para ver o comentário."),
+        TipoNotificacao.SugestaoLancada => (
+            $"Sua sugestão \"{sugestao.Titulo}\" foi lançada!",
+            $"Boas notícias! Sua sugestão \"{sugestao.Titulo}\" acabou de ser lançada. Obrigado por contribuir com o Portal de Sugestões."),
         _ => throw new ArgumentOutOfRangeException(nameof(tipo))
     };
 

@@ -64,4 +64,32 @@ public class NotificacoesTests
             Assert.Equal(1, count);
         }
     }
+
+    [Fact]
+    public async Task MarcarComoLancada_GravaNotificacaoLog_SoNaTransicao()
+    {
+        await using var factory = new CustomWebApplicationFactory();
+        var admin = await factory.CreateAuthenticatedClientAsync("admin.notif4@empresa.com", "Admin", "Empresa", "AdminInterno");
+        var categoriaId = await admin.CriarCategoriaAsync();
+        var cliente = await factory.CreateAuthenticatedClientAsync("cliente.notif4@empresa.com", "Cliente", "Empresa", "Cliente");
+        var id = await cliente.CriarSugestaoAsync(categoriaId);
+        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+
+        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Planejado" });
+
+        await using (var db = factory.CreateDbContext())
+        {
+            var count = await db.NotificacaoLogs.CountAsync(l => l.SugestaoId == id && l.Tipo == TipoNotificacao.SugestaoLancada);
+            Assert.Equal(0, count);
+        }
+
+        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Lancado" });
+        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Lancado" });
+
+        await using (var db = factory.CreateDbContext())
+        {
+            var count = await db.NotificacaoLogs.CountAsync(l => l.SugestaoId == id && l.Tipo == TipoNotificacao.SugestaoLancada);
+            Assert.Equal(1, count);
+        }
+    }
 }

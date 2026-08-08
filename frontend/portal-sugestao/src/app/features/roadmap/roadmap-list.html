@@ -1,0 +1,38 @@
+<div class="roadmap-page">
+  <div class="page-title">
+    <h1>Roadmap</h1>
+  </div>
+
+  @if (erro()) {
+    <p class="erro">{{ erro() }}</p>
+  }
+
+  <section class="card">
+    <dx-data-grid
+      [dataSource]="sugestoesDataSource"
+      [showBorders]="true"
+      [columnAutoWidth]="true"
+      [remoteOperations]="{ paging: true }"
+      [paging]="{ pageSize: 20 }"
+      [pager]="{ visible: true, showPageSizeSelector: true, allowedPageSizes: [10, 20, 50], showInfo: true }"
+      noDataText="Nenhuma sugestão publicada ainda."
+    >
+      <dxi-column dataField="produtoNome" caption="Produto"></dxi-column>
+      <dxi-column dataField="titulo" caption="Título"></dxi-column>
+      <dxi-column dataField="categoriaNome" caption="Categoria"></dxi-column>
+      <dxi-column dataField="totalVotos" caption="Votos" [width]="90"></dxi-column>
+      <dxi-column caption="Estágio" cellTemplate="estagioTemplate" [width]="220"></dxi-column>
+
+      <div *dxTemplate="let row of 'estagioTemplate'">
+        <dx-select-box
+          [items]="estagioOpcoes"
+          displayExpr="label"
+          valueExpr="value"
+          [value]="row.data.estagioRoadmap"
+          placeholder="Definir estágio..."
+          (onValueChanged)="alterarEstagio(row.data.id, $event.value)"
+        ></dx-select-box>
+      </div>
+    </dx-data-grid>
+  </section>
+</div>

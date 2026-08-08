@@ -10,6 +10,8 @@
   --ps-color-text: #1f2937;
   --ps-color-text-muted: #6b7280;
   --ps-color-danger: #c0392b;
+  --ps-color-warning: #b7791f;
+  --ps-color-success: #15803d;
 
   --ps-radius: 8px;
   --ps-shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.06);
@@ -56,4 +58,30 @@ a {
   border-radius: var(--ps-radius);
   box-shadow: var(--ps-shadow);
   padding: 24px;
+}
+
+.estagio-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+
+  &.em-analise {
+    background: var(--ps-color-text-muted);
+  }
+
+  &.planejado {
+    background: var(--ps-color-accent);
+  }
+
+  &.em-desenvolvimento {
+    background: var(--ps-color-warning);
+  }
+
+  &.lancado {
+    background: var(--ps-color-success);
+  }
 }

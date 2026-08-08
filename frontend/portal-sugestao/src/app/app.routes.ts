@@ -31,6 +31,11 @@ export const routes: Routes = [
         path: 'produtos',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/produtos/produtos-list').then((m) => m.ProdutosList)
+      },
+      {
+        path: 'roadmap',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/roadmap/roadmap-list').then((m) => m.RoadmapList)
       }
     ]
   }

@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { DxDataGridModule, DxTemplateModule } from 'devextreme-angular';
 import { DxTextBoxModule, DxSelectBoxModule, DxButtonModule, DxPopupModule } from 'devextreme-angular';
 import CustomStore from 'devextreme/data/custom_store';
@@ -6,7 +7,7 @@ import DataSource from 'devextreme/data/data_source';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SugestoesService } from '../../core/sugestoes/sugestoes.service';
-import { Categoria, Produto } from '../../core/models/sugestao.model';
+import { Categoria, ESTAGIO_ROADMAP_OPCOES, EstagioRoadmap, Produto } from '../../core/models/sugestao.model';
 import { Comentarios } from './comentarios/comentarios';
 
 const LIMITE_VOTOS = 3;
@@ -15,7 +16,7 @@ const TAMANHO_PAGINA = 20;
 @Component({
   selector: 'app-sugestoes-list',
   standalone: true,
-  imports: [DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule, DxPopupModule, Comentarios],
+  imports: [NgClass, DxDataGridModule, DxTemplateModule, DxTextBoxModule, DxSelectBoxModule, DxButtonModule, DxPopupModule, Comentarios],
   templateUrl: './sugestoes-list.html',
   styleUrl: './sugestoes-list.scss'
 })
@@ -132,4 +133,11 @@ export class SugestoesList implements OnInit {
     });
   }
 
+  estagioLabel(estagio: EstagioRoadmap | null | undefined): string {
+    return ESTAGIO_ROADMAP_OPCOES.find((o) => o.value === estagio)?.label ?? '—';
+  }
+
+  estagioClasse(estagio: EstagioRoadmap | null | undefined): string {
+    return ESTAGIO_ROADMAP_OPCOES.find((o) => o.value === estagio)?.classe ?? '';
+  }
 }

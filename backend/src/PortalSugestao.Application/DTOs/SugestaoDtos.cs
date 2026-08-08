@@ -14,6 +14,7 @@ public record SugestaoDto(
     int AutorId,
     string AutorNome,
     StatusSugestao Status,
+    EstagioRoadmap? EstagioRoadmap,
     DateTime DataCriacao,
     int TotalVotos,
     bool VotadoPorMim,
@@ -22,6 +23,8 @@ public record SugestaoDto(
     string? ModeradorNome = null);
 
 public record CreateSugestaoRequest(int ProdutoId, string Titulo, string Descricao, string ResultadoEsperado, int CategoriaId);
+
+public record AtualizarEstagioRoadmapRequest(EstagioRoadmap Estagio);
 
 /// <summary>
 /// Resposta paginada do ranking — evita transferir/materializar todas as sugestões publicadas de uma vez

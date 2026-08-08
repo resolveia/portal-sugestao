@@ -1,5 +1,14 @@
 export type StatusSugestao = 'EmModeracao' | 'Publicada' | 'Rejeitada';
 
+export type EstagioRoadmap = 'EmAnalise' | 'Planejado' | 'EmDesenvolvimento' | 'Lancado';
+
+export const ESTAGIO_ROADMAP_OPCOES: { value: EstagioRoadmap; label: string; classe: string }[] = [
+  { value: 'EmAnalise', label: 'Em análise', classe: 'em-analise' },
+  { value: 'Planejado', label: 'Planejado', classe: 'planejado' },
+  { value: 'EmDesenvolvimento', label: 'Em desenvolvimento', classe: 'em-desenvolvimento' },
+  { value: 'Lancado', label: 'Lançado', classe: 'lancado' }
+];
+
 export interface Sugestao {
   id: number;
   titulo: string;
@@ -12,6 +21,7 @@ export interface Sugestao {
   autorId: number;
   autorNome: string;
   status: StatusSugestao;
+  estagioRoadmap?: EstagioRoadmap | null;
   dataCriacao: string;
   totalVotos: number;
   votadoPorMim: boolean;

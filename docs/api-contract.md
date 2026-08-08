@@ -149,6 +149,23 @@ Rejeita a sugestão (`status` → `Rejeitada`), com justificativa.
 
 **Respostas de erro**: `400` (motivo vazio), `404` (não existe), `409` (já foi moderada).
 
+## Roadmap
+
+> Requer role `AdminInterno`.
+
+### `PUT /api/sugestoes/{id}/roadmap`
+Define o estágio de roadmap (status de andamento público — PRD, ponto em aberto #2) de uma sugestão já publicada. Notifica o autor por e-mail só na transição pra `Lancado` (não a cada mudança de estágio intermediária).
+
+**Request**
+```json
+{ "estagio": "Planejado" }
+```
+Valores possíveis: `EmAnalise`, `Planejado`, `EmDesenvolvimento`, `Lancado`.
+
+**Respostas de erro**: `404` (não existe), `409` (sugestão ainda não publicada).
+
+> `estagioRoadmap` aparece em toda resposta de `SugestaoDto` (nullable — `null` até o Admin definir o primeiro estágio). Sugestões com `estagioRoadmap = Lancado` não aceitam mais votos (`409` em `POST /api/sugestoes/{id}/votos` — regra 7.2, "sugestões publicadas e ainda não construídas/lançadas").
+
 ## Votação
 
 > Requerem role `Cliente` (Admin interno não vota — PRD seção 6).
@@ -156,7 +173,7 @@ Rejeita a sugestão (`status` → `Rejeitada`), com justificativa.
 ### `POST /api/sugestoes/{id}/votos`
 Vota na sugestão (deve estar `Publicada`). Limite de **3 votos ativos simultâneos** por cliente, um voto por sugestão (regra 7.2).
 
-**Respostas de erro**: `404` (não existe), `409` (não publicada / já votou nela / limite de 3 votos atingido).
+**Respostas de erro**: `404` (não existe), `409` (não publicada / já lançada / já votou nela / limite de 3 votos atingido).
 
 ### `DELETE /api/sugestoes/{id}/votos`
 Remove o voto do usuário autenticado nessa sugestão — é assim que se faz a **realocação**: remover de uma e depois `POST` em outra.
