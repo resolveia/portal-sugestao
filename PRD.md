@@ -35,10 +35,10 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 7. **Notificações por e-mail** ao cliente quando houver mudanças relevantes na sugestão (ex: aprovação, rejeição, nova resposta/comentário da equipe).
 8. **Autenticação via SSO** com o ERP (mecanismo de token a definir com o time técnico do ERP).
 9. **Multi-tenant compartilhado**: sugestões e votos são visíveis e compartilhados entre todos os clientes/empresas que usam o ERP (portal único, não isolado por empresa).
+10. **Status de andamento tipo Kanban/roadmap público** (Em análise, Planejado, Em desenvolvimento, Lançado) — definido pelo Admin interno em sugestões já publicadas, visível a todos no ranking (ver seção 7.6). Sugestões marcadas como "Lançado" deixam de aceitar novos votos.
 
 ### Fora de escopo (nesta fase)
 
-- Status de andamento tipo Kanban/roadmap público (Em análise, Planejado, Em desenvolvimento, Lançado). Nesta fase, a priorização é comunicada apenas pelo ranking de votos — **ponto em aberto** para futura evolução (ver seção 12).
 - Perfis intermediários de moderação (ex: suporte/CS); apenas **Cliente** e **Admin interno**.
 - Isolamento de sugestões por empresa/tenant.
 - Integração automática de categorias com módulos já existentes no ERP (categorias são geridas de forma independente no portal).
@@ -55,6 +55,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 | Comentar | ✅ | ✅ |
 | Moderar/excluir comentários | ❌ | ✅ |
 | Gerenciar categorias e produtos (ERP) | ❌ | ✅ |
+| Definir estágio de roadmap de sugestão publicada | ❌ | ✅ |
 | Ver ranking de mais votadas | ✅ | ✅ |
 
 \* Admin interno não computa votos de cliente; a definir se admin também poderá votar em nome da equipe de produto (ponto em aberto).
@@ -68,7 +69,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 - Campos mínimos: produto (ERP de origem), título, descrição, resultado esperado com a solicitação, categoria, autor, empresa/cliente de origem, data de criação, status. Todos obrigatórios no cadastro.
 
 ### 7.2 Votação
-- Cada usuário cliente tem no máximo **3 votos ativos simultâneos**, aplicáveis apenas a sugestões **publicadas e ainda não construídas/lançadas**.
+- Cada usuário cliente tem no máximo **3 votos ativos simultâneos**, aplicáveis apenas a sugestões **publicadas e ainda não construídas/lançadas** (estágio de roadmap `Lançado` — regra imposta pela API, ver seção 7.6).
 - O cliente pode remover um voto de uma sugestão e realocá-lo para outra a qualquer momento.
 - Um usuário não pode votar mais de uma vez na mesma sugestão.
 - O voto é vinculado ao usuário individual (não à empresa/conta cliente).
@@ -83,7 +84,13 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 - "Excluir" categoria/produto é, na prática, uma desativação (fica oculto do cadastro de novas sugestões, mas permanece visível/gerenciável pelo Admin) — exclusão física não é permitida enquanto houver sugestões vinculadas.
 
 ### 7.5 Notificações
-- Disparadas por e-mail ao autor da sugestão nos eventos: aprovação, rejeição, e comentário feito pelo **Admin interno** (comentário de outro cliente não dispara notificação — decisão tomada para evitar excesso de e-mails, resolvendo o ponto em aberto #3 original).
+- Disparadas por e-mail ao autor da sugestão nos eventos: aprovação, rejeição, comentário feito pelo **Admin interno**, e sugestão marcada como **"Lançado"** no roadmap (comentário de outro cliente e demais mudanças de estágio intermediárias não disparam notificação — decisão tomada para evitar excesso de e-mails, resolvendo o ponto em aberto #3 original).
+
+### 7.6 Estágio de Roadmap
+- Toda sugestão **publicada** pode receber um estágio de andamento, definido pelo Admin interno: **Em análise → Planejado → Em desenvolvimento → Lançado** (nesta ordem sugerida, mas sem transição forçada — o Admin pode pular ou voltar estágios).
+- Antes do Admin definir o primeiro estágio, a sugestão aparece "sem estágio" no ranking (não é o mesmo que "Em análise" — é a ausência de classificação).
+- Estágio **"Lançado"** encerra a elegibilidade a novos votos (regra 7.2) e dispara notificação por e-mail ao autor (regra 7.5), uma única vez, na transição.
+- Visível a todos os usuários autenticados no ranking (Cliente e Admin), como parte da transparência de priorização (objetivo — seção 2).
 
 ## 8. Fluxos Principais
 
@@ -115,7 +122,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 ## 10. Modelo de Dados (entidades principais — visão preliminar)
 
 - **Usuario** (id, nome, email, empresa/cliente de origem, referência ao usuário do ERP, role)
-- **Sugestao** (id, produtoId, titulo, descricao, resultadoEsperado, categoriaId, autorId, status, dataCriacao, dataModeracao, motivoRejeicao, moderadorId)
+- **Sugestao** (id, produtoId, titulo, descricao, resultadoEsperado, categoriaId, autorId, status, estagioRoadmap, dataCriacao, dataModeracao, motivoRejeicao, moderadorId)
 - **Categoria** (id, nome, ativo)
 - **Produto** (id, nome, ativo) — ERPs comercializados pela empresa (ex: AJORS.OOH, AJORS.SIGN)
 - **Voto** (id, sugestaoId, usuarioId, dataVoto)
@@ -134,7 +141,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 ## 12. Pontos em Aberto
 
 1. **Mecanismo técnico de SSO** entre ERP e Portal (tipo de token, emissor, validação na API .NET) — definir com time técnico do ERP. **Ainda em aberto**: autenticação mock via JWT (`POST /api/auth/mock-login`) está em uso desde a Fase 1, simulando o SSO até a definição real (bloqueia a Fase 6).
-2. **Status de andamento (Kanban/roadmap público)**: hoje fora de escopo, mas é uma evolução natural após o MVP — vale revisitar após o portal estar em produção.
+2. ~~Status de andamento (Kanban/roadmap público)~~ — **Resolvido (2026-08-08)**: implementado como estágio de roadmap (Em análise/Planejado/Em desenvolvimento/Lançado) na sugestão publicada, gerenciado pelo Admin numa tela dedicada (`/roadmap`) e visível a todos no ranking (ver seção 7.6).
 3. ~~Regras de e-mail: quais eventos exatos disparam notificação~~ — **Resolvido**: notifica apenas aprovação, rejeição e comentário feito pelo Admin interno; comentário de outro cliente não notifica (ver seção 7.5).
 4. Se Admin interno também poderá votar (representando a equipe de produto) ou fica restrito a clientes. **Implementado como restrito a clientes** (Admin não vota) — revisitar se a necessidade de a equipe de produto votar surgir.
 5. Política de duplicidade: como o Admin deve tratar sugestões duplicadas (mesclar votos ao unificar duas sugestões?). Ainda não implementado.
@@ -150,7 +157,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 
 Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a **construção técnica** será feita de forma incremental, entregando valor testável a cada etapa. Cada fase pressupõe a anterior concluída.
 
-> **Status geral (atualizado em 2026-08-03)**: Fases 0 a 5 concluídas e validadas ponta a ponta; Fase 7 (testes funcionais, performance, paginação e responsividade mobile) concluída, restando apenas a validação com stakeholders/usuários-piloto; Fase 6 bloqueada pelo ponto em aberto #1 (SSO real). Repositório: https://github.com/resolveia/portal-sugestao (CI configurado — GitHub Actions roda a suíte completa de testes a cada push/PR pra `master`).
+> **Status geral (atualizado em 2026-08-08)**: Fases 0 a 5 concluídas e validadas ponta a ponta (inclui o estágio de roadmap/Kanban, ponto em aberto #2, antecipado da Fase 8); Fase 7 (testes funcionais, performance, paginação e responsividade mobile) concluída, restando apenas a validação com stakeholders/usuários-piloto; Fase 6 bloqueada pelo ponto em aberto #1 (SSO real, em definição com o time do ERP). Repositório: https://github.com/resolveia/portal-sugestao (CI configurado — GitHub Actions roda a suíte completa de testes a cada push/PR pra `master`).
 
 ### Fase 0 — Definições e Preparação
 - Definir mecanismo técnico de SSO com o time do ERP (ponto em aberto #1).
@@ -213,6 +220,8 @@ Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a
 ### Fase 8 — Lançamento (Go-live) e Acompanhamento
 - Publicação em produção e liberação do botão no ERP para todos os clientes.
 - Acompanhamento das métricas de sucesso (seção 13) nas primeiras semanas.
-- Coleta de feedback para priorizar evoluções futuras (ex: status tipo Kanban/roadmap público, ponto em aberto #2).
+- Coleta de feedback para priorizar evoluções futuras.
+
+> O status tipo Kanban/roadmap público (ponto em aberto #2) originalmente cogitado só para depois do go-live foi antecipado e já está implementado (ver seção 7.6) — não é mais um item pendente desta fase.
 
 **Status: ⏳ Não iniciada.** Depende da Fase 6 (SSO real) e de decisão de hospedagem/CI-CD para produção, ainda não discutida.
