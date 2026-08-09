@@ -29,7 +29,7 @@
       <dxi-column dataField="totalVotos" caption="Votos" [width]="90"></dxi-column>
       <dxi-column dataField="dataCriacao" caption="Criada em" dataType="date" [format]="'dd/MM/yyyy'"></dxi-column>
       @if (authService.usuario()?.role === 'Cliente') {
-        <dxi-column caption="Ação" cellTemplate="votoTemplate" [width]="160"></dxi-column>
+        <dxi-column caption="Ação" cellTemplate="votoTemplate" [width]="160" [fixed]="true" fixedPosition="right"></dxi-column>
       }
 
       <div *dxTemplate="let row of 'estagioTemplate'">
