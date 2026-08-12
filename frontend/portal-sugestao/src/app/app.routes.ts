@@ -9,6 +9,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login').then((m) => m.Login)
   },
   {
+    path: 'login/token',
+    loadComponent: () => import('./features/login/login-token/login-token').then((m) => m.LoginToken)
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./core/layout/app-shell').then((m) => m.AppShell),

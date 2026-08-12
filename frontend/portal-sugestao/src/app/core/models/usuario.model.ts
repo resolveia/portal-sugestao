@@ -15,3 +15,21 @@ export interface MockLoginResponse {
   email: string;
   role: RoleUsuario;
 }
+
+export interface UsuarioLogado {
+  id: number;
+  nome: string;
+  email: string;
+  role: RoleUsuario;
+}
+
+export interface LoginTokenResponse {
+  erro: boolean;
+  mensagem: string | null;
+  usuario: UsuarioLogado | null;
+}
+
+export interface TokensDemoResponse {
+  admin: string;
+  cliente: string;
+}

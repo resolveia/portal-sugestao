@@ -58,3 +58,16 @@
 .botao-entrar {
   margin-top: 8px;
 }
+
+.divisor {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ps-color-text-muted);
+  margin-top: 4px;
+}
+
+.botoes-simulacao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

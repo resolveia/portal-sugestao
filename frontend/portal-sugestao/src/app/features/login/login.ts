@@ -20,6 +20,7 @@ export class Login {
 
   readonly erro = signal<string | null>(null);
   readonly carregando = signal(false);
+  readonly simulando = signal(false);
 
   constructor(private readonly authService: AuthService, private readonly router: Router) {}
 
@@ -44,5 +45,23 @@ export class Login {
           this.erro.set('Não foi possível entrar. Verifique se a API está rodando.');
         }
       });
+  }
+
+  /** Simula a entrada automática vinda do botão "Portal de Sugestão" do ERP (token hoje simulado). */
+  simularEntradaViaErp(perfil: 'admin' | 'cliente'): void {
+    this.erro.set(null);
+    this.simulando.set(true);
+
+    this.authService.tokensDemo().subscribe({
+      next: (tokens) => {
+        this.simulando.set(false);
+        const token = perfil === 'admin' ? tokens.admin : tokens.cliente;
+        this.router.navigate(['/login/token'], { queryParams: { token } });
+      },
+      error: () => {
+        this.simulando.set(false);
+        this.erro.set('Não foi possível simular a entrada via ERP.');
+      }
+    });
   }
 }

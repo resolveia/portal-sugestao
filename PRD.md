@@ -116,8 +116,8 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 - **Banco de dados**: SQL Server.
 - **Backend**: API REST em .NET 8.
 - **Frontend**: Angular + DevExtreme (componentes de grid, formulários, dashboard para o ranking).
-- **Autenticação**: SSO com o ERP — mecanismo exato (JWT próprio, OAuth2/OIDC, etc.) **ainda não definido**, a ser especificado junto ao time responsável pela autenticação do ERP.
-- **Integração com ERP**: botão no ERP abre o portal em nova aba, repassando token/sessão para autenticação automática (sem novo login).
+- **Autenticação**: SSO com o ERP via **token na URL** (`?token=...`) + **cookie de sessão HttpOnly** emitido pela própria API do Portal (24h, sem renovação) — definido com o time do ERP em 2026-08-12 (ver `docs/sso-checklist.md`). Algoritmo/chave de criptografia do token real ainda em aberto (ponto #1); simulado até lá.
+- **Integração com ERP**: botão no ERP abre o portal em nova aba com o token na URL; o Portal chama sua própria rota de login automático (`/login/token`), que valida o token e autentica via cookie (sem novo login manual). O login manual (`/login`) continua existindo em paralelo, para acesso direto/testes.
 
 ## 10. Modelo de Dados (entidades principais — visão preliminar)
 
@@ -140,7 +140,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 
 ## 12. Pontos em Aberto
 
-1. **Mecanismo técnico de SSO** entre ERP e Portal (tipo de token, emissor, validação na API .NET) — definir com time técnico do ERP. **Ainda em aberto**: autenticação mock via JWT (`POST /api/auth/mock-login`) está em uso desde a Fase 1, simulando o SSO até a definição real (bloqueia a Fase 6).
+1. **Mecanismo técnico de SSO** entre ERP e Portal — **definido com o time técnico do ERP em 2026-08-12** (ver `docs/sso-checklist.md`): a API de login é implementada pelo próprio time do Portal (não é um serviço central); o token vem via query string (`?token=...`) na URL que o ERP abre; o token é um dado criptografado (algoritmo/chave ainda não definidos) usado para identificar o usuário; a sessão no Portal é um **cookie HttpOnly** (24h de validade, sem renovação — em 401 o usuário é levado de volta ao login); Portal e API ficam no mesmo domínio (sem problema de cookie cross-site). **Ainda em aberto**: o algoritmo/chave de criptografia real do token. Até isso ser definido, o token continua **simulado** (`ErpTokenSimuladoService`, base64 sem criptografia real) — ver Fase 6.
 2. ~~Status de andamento (Kanban/roadmap público)~~ — **Resolvido (2026-08-08)**: implementado como estágio de roadmap (Em análise/Planejado/Em desenvolvimento/Lançado) na sugestão publicada, gerenciado pelo Admin numa tela dedicada (`/roadmap`) e visível a todos no ranking (ver seção 7.6).
 3. ~~Regras de e-mail: quais eventos exatos disparam notificação~~ — **Resolvido**: notifica apenas aprovação, rejeição e comentário feito pelo Admin interno; comentário de outro cliente não notifica (ver seção 7.5).
 4. Se Admin interno também poderá votar (representando a equipe de produto) ou fica restrito a clientes. **Implementado como restrito a clientes** (Admin não vota) — revisitar se a necessidade de a equipe de produto votar surgir.
@@ -157,7 +157,7 @@ Todas as funcionalidades abaixo compõem a primeira e única fase planejada no m
 
 Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a **construção técnica** será feita de forma incremental, entregando valor testável a cada etapa. Cada fase pressupõe a anterior concluída.
 
-> **Status geral (atualizado em 2026-08-08)**: Fases 0 a 5 concluídas e validadas ponta a ponta (inclui o estágio de roadmap/Kanban, ponto em aberto #2, antecipado da Fase 8); Fase 7 (testes funcionais, performance, paginação e responsividade mobile) concluída, restando apenas a validação com stakeholders/usuários-piloto; Fase 6 bloqueada pelo ponto em aberto #1 (SSO real, em definição com o time do ERP). Repositório: https://github.com/resolveia/portal-sugestao (CI configurado — GitHub Actions roda a suíte completa de testes a cada push/PR pra `master`).
+> **Status geral (atualizado em 2026-08-12)**: Fases 0 a 5 concluídas e validadas ponta a ponta (inclui o estágio de roadmap/Kanban, ponto em aberto #2, antecipado da Fase 8); Fase 7 (testes funcionais, performance, paginação e responsividade mobile) concluída, restando apenas a validação com stakeholders/usuários-piloto; Fase 6 (SSO real) em andamento — mecanismo definido com o time do ERP e arquitetura-alvo (cookie HttpOnly + login automático via token) implementada com token simulado, falta o algoritmo/chave real de criptografia e o botão de verdade dentro do ERP. Repositório: https://github.com/resolveia/portal-sugestao (CI configurado — GitHub Actions roda a suíte completa de testes a cada push/PR pra `master`).
 
 ### Fase 0 — Definições e Preparação
 - Definir mecanismo técnico de SSO com o time do ERP (ponto em aberto #1).
@@ -207,7 +207,11 @@ Ainda que o escopo funcional (seção 5) seja tratado como MVP de fase única, a
 - Abertura do portal em nova aba com SSO real (fim a fim, substituindo mocks de autenticação usados nas fases anteriores).
 - Testes de integração entre ERP e Portal em ambiente de homologação.
 
-**Status: ⏸ Bloqueada.** Depende da definição do mecanismo técnico de SSO com o time do ERP (ponto em aberto #1) — ainda não iniciada.
+**Status: 🔶 Em andamento (parcialmente concluída em 2026-08-12).** Mecanismo de SSO definido com o time do ERP (ponto em aberto #1) e a arquitetura-alvo já implementada e simulada:
+- **Backend**: autenticação por **cookie HttpOnly** (`portal_sugestao_session`, 24h, `SameSite=Lax`) em vez de Bearer/localStorage — `JwtBearerEvents.OnMessageReceived` lê o cookie (com fallback pro header `Authorization`, usado pelos testes). Nova rota `POST /api/auth/login-token` (equivalente à que o ERP vai chamar com o token da URL), que hoje decodifica um token **simulado** (`ErpTokenSimuladoService`, base64 sem criptografia real — placeholder até o algoritmo/chave reais serem definidos), identifica/cria o usuário e autentica. `POST /api/auth/logout` limpa o cookie (só o backend consegue, por ser HttpOnly). `GET /api/auth/tokens-demo` gera tokens simulados de demonstração para os dois perfis (Admin/Cliente), só para popular o fluxo automático sem o ERP real.
+- **Frontend**: nova rota `/login/token` (lê `?token=...` da URL, chama `login-token`, redireciona) simulando a URL que o ERP vai abrir — convive com o login manual (`/login`), que ganhou 2 botões ("Entrar como Admin/Cliente via ERP") para simular essa entrada automática sem precisar montar a URL manualmente. `AuthService`/interceptor migrados de Bearer+localStorage para `withCredentials`+cookie; 401 limpa a sessão local e redireciona pro login.
+- Validado ponta a ponta via Playwright (login manual, login automático Admin, login automático Cliente, token inválido) e via curl (cookie setado, autenticação por cookie, 401 sem cookie, logout limpando o cookie). 46 testes de backend (3 novos), 40 de frontend (6 novos).
+- **Falta para concluir**: algoritmo/chave real de criptografia do token (ponto em aberto #1 ainda parcialmente aberto), decodificação real substituindo `ErpTokenSimuladoService`, botão real dentro do ERP, e testes de integração em homologação com o ERP de verdade.
 
 ### Fase 7 — Testes, Performance e Homologação
 - Testes funcionais ponta a ponta dos fluxos principais (seção 8).

@@ -1,52 +1,38 @@
 # Checklist — Definição do SSO entre ERP e Portal de Sugestões
 
-> Referente ao **ponto em aberto #1** do PRD (seção 12) e bloqueio da **Fase 6 — Integração com o ERP** (seção 14).
-> Objetivo: levar essas perguntas ao time técnico responsável pela autenticação do ERP para destravar a implementação do SSO real, hoje substituído por um login mock (`POST /api/auth/mock-login`).
+> Referente ao **ponto em aberto #1** do PRD (seção 12) e à **Fase 6 — Integração com o ERP** (seção 14).
+> **Atualizado em 2026-08-12** com as definições da reunião do usuário com o time técnico do ERP.
 
-## 1. Protocolo / mecanismo de autenticação
+## Resolvido (reunião de 2026-08-12)
 
-- [ ] O ERP vai emitir um **JWT próprio** (assinado com chave/certificado compartilhado com o Portal)?
-- [ ] Ou o SSO será feito via padrão **OAuth2 / OpenID Connect**, com um Identity Provider centralizado?
-- [ ] Existe algum mecanismo de SSO já usado por **outros módulos/satélites** do ERP que devemos seguir (para manter consistência)?
+| Pergunta | Definição |
+|---|---|
+| A API de validação do token é nossa ou de um serviço central? | **Nossa** — implementada pelo próprio time do Portal, dentro do ERP. Pode deixar de ser necessária no futuro (possível centralização), mas hoje é local. |
+| O que é o token? | Um **dado criptografado** que a API usa para identificar/conectar o usuário. |
+| Quais campos vêm no login? | Flexível — o time do ERP devolve os campos que a aplicação pedir. |
+| Domínio | Portal e API ficam no **mesmo domínio** — elimina complicação de cookie cross-site. |
+| Formato de erro | Sempre **200 OK**, com `{ Erro: true, Mensagem: "..." }` no corpo em caso de falha (exceto rota inexistente, que é 404 real). |
+| Validade da sessão | **Cookie HttpOnly, 24h, sem renovação.** Em 401, redirecionar para a página de login. |
+| Login manual continua existindo? | **Sim** — em paralelo ao login automático via token. Precisa de uma rota separada que recebe o token da URL e loga automaticamente. |
 
-## 2. Emissão e validação do token
+## Implementado nesta sessão (simulado, ver Fase 6 no PRD)
 
-- [ ] Quem é o **emissor (issuer)** do token — o próprio ERP, ou um serviço de autenticação separado?
-- [ ] Como a API do Portal (.NET) deve **validar** o token: chave pública/certificado (JWKS?), endpoint de introspecção, ou outro mecanismo?
-- [ ] Qual o **algoritmo de assinatura** (RS256, HS256, etc.)?
-- [ ] Existe rotação de chaves? Se sim, como o Portal deve acompanhar isso?
+Como o algoritmo/chave de criptografia real do token ainda não foi definido, a arquitetura-alvo já foi implementada com um **token simulado** (fácil de trocar depois):
 
-## 3. Conteúdo do token (claims)
+- Backend: cookie HttpOnly `portal_sugestao_session` (24h) substituindo o Bearer/localStorage; `POST /api/auth/login-token` (equivalente à rota que o ERP vai chamar); `ErpTokenSimuladoService` decodifica um token fake (base64, sem criptografia real); `POST /api/auth/logout` limpa o cookie; `GET /api/auth/tokens-demo` gera tokens de demonstração para os dois perfis.
+- Frontend: rota `/login/token` (lê `?token=...` da URL, loga automaticamente) convivendo com `/login` (manual, que ganhou botões para simular a entrada via ERP nos dois perfis).
+- Validado ponta a ponta via Playwright e curl — ver PRD.md, Fase 6.
 
-- [ ] Quais dados do usuário virão no token? Precisamos de, no mínimo:
-  - [ ] Id do usuário no ERP
-  - [ ] Nome
-  - [ ] E-mail
-  - [ ] Empresa/cliente de origem
-  - [ ] Role/perfil (para diferenciar **Cliente** de **Admin interno** — ver seção 6 do PRD)
-- [ ] Esses dados já existem hoje em algum token/sessão do ERP, ou precisam ser adicionados?
+## Ainda em aberto — próxima rodada com o time do ERP
 
-## 4. Handoff (abertura do Portal a partir do ERP)
+1. **Algoritmo de criptografia do token** (AES simétrico? RSA?) e como a **chave/certificado** será compartilhada com segurança entre os times.
+2. **O token decriptado já traz os dados do usuário** (nome, email, empresa, role) **ou só um identificador** que exige uma consulta extra (a alguma API ou ao banco do ERP) para buscar esses dados? Se for isso, como o Portal acessa essa fonte?
+3. **Lista exata de campos** a pedir: confirmar que o ERP consegue mandar **id do usuário, nome, email, empresa/cliente de origem e uma role/perfil** que diferencie Cliente de Admin interno do Portal.
+4. **Nome do cookie**: seguir um padrão já usado nos outros apps da empresa, ou o Portal fica livre para definir (hoje usa `portal_sugestao_session`)?
+5. **Data/URL real do botão "Portal de Sugestão"** dentro do ERP e ambiente de homologação para o teste de integração fim a fim.
 
-- [ ] Como o botão **"Portal de Sugestão"** dentro do ERP vai repassar o token para a nova aba?
-  - Ex: query string, header customizado, endpoint intermediário que troca um código de curta duração por um token (mais seguro — evita vazar token na URL/histórico do navegador).
-- [ ] Existe alguma preocupação de segurança específica do time do ERP quanto a esse repasse (CORS, domínio, etc.)?
+## Próximos passos após a definição do ponto 1-2
 
-## 5. Expiração e renovação de sessão
-
-- [ ] Qual a validade do token emitido pelo ERP?
-- [ ] Existe mecanismo de **refresh**, ou a sessão do Portal simplesmente expira junto com a do ERP (usuário refaz o fluxo pelo botão)?
-- [ ] O que deve acontecer no Portal quando o token expirar durante o uso (logout automático, redirecionar de volta ao ERP)?
-
-## 6. Ambiente de homologação
-
-- [ ] O ERP tem um **ambiente de teste/homologação** com esse mecanismo de SSO já configurado ou configurável, para validarmos a integração ponta a ponta antes de produção?
-- [ ] Há um responsável técnico do lado do ERP disponível para apoiar esse teste conjunto (Fase 6 do PRD prevê testes de integração em homologação)?
-
-## Próximos passos após essa definição
-
-Assim que os pontos acima estiverem respondidos, a Fase 6 do Portal pode ser implementada — ela é relativamente curta do lado do Portal (o trabalho pesado é integrar contra o mecanismo real definido aqui). Isso inclui:
-
-1. Substituir a autenticação mock (`/api/auth/mock-login`) pela validação real do token do ERP.
-2. Implementar o botão "Portal de Sugestão" dentro do ERP, repassando o token conforme definido na seção 4.
-3. Testes de integração ponta a ponta em homologação (seção 6).
+1. Substituir `ErpTokenSimuladoService` pela decriptação real (algoritmo/chave definidos com o ERP).
+2. Implementar o botão "Portal de Sugestão" dentro do ERP, apontando para `/login/token?token=...`.
+3. Testes de integração ponta a ponta em homologação.

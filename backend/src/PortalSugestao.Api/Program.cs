@@ -47,6 +47,7 @@ builder.Services.AddDbContext<PortalSugestaoDbContext>(options =>
 
 builder.Services.Configure<MockAuthOptions>(builder.Configuration.GetSection(MockAuthOptions.SectionName));
 builder.Services.AddScoped<MockTokenService>();
+builder.Services.AddSingleton<ErpTokenSimuladoService>();
 
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.AddScoped<NotificacaoService>();
@@ -67,6 +68,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(mockAuthOptions.SigningKey)),
             ValidateLifetime = true
         };
+        // O fluxo real do ERP autentica via cookie HttpOnly (não Authorization header) —
+        // ver docs/sso-checklist.md. Se não vier no cookie, cai no header Bearer padrão
+        // (usado hoje pelos testes de integração via TestHelpers).
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Cookies.TryGetValue(AuthCookieDefaults.Name, out var cookieToken))
+                {
+                    context.Token = cookieToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -76,7 +92,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy(CorsPolicy, policy =>
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod());
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 
 var app = builder.Build();

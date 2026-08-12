@@ -41,5 +41,22 @@
       [disabled]="carregando()"
       (onClick)="entrar()"
     ></dx-button>
+
+    <div class="divisor">ou simule a entrada automática vinda do ERP</div>
+
+    <div class="botoes-simulacao">
+      <dx-button
+        text="Entrar como Admin (via ERP)"
+        width="100%"
+        [disabled]="simulando()"
+        (onClick)="simularEntradaViaErp('admin')"
+      ></dx-button>
+      <dx-button
+        text="Entrar como Cliente (via ERP)"
+        width="100%"
+        [disabled]="simulando()"
+        (onClick)="simularEntradaViaErp('cliente')"
+      ></dx-button>
+    </div>
   </div>
 </div>
