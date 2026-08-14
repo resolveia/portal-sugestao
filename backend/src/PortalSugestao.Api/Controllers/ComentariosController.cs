@@ -24,21 +24,19 @@ public class ComentariosController : ControllerBase
         _notificacaoService = notificacaoService;
     }
 
-    /// <summary>
-    /// Lista a thread de comentários, disponível apenas em sugestões publicadas (regra 7.3 do PRD).
-    /// </summary>
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<ComentarioDto>>> Listar(int sugestaoId)
+    /// <summary>Lista a thread de comentários, disponível apenas em sugestões publicadas (regra 7.3 do PRD).</summary>
+    [HttpPost("listar")]
+    public async Task<ActionResult<ListarComentariosResponse>> Listar(int sugestaoId)
     {
         var sugestao = await _db.Sugestoes.FindAsync(sugestaoId);
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new ListarComentariosResponse(true, "Sugestão não encontrada.", null));
         }
 
         if (sugestao.Status != StatusSugestao.Publicada)
         {
-            return Conflict("Comentários disponíveis apenas em sugestões publicadas.");
+            return Ok(new ListarComentariosResponse(true, "Comentários disponíveis apenas em sugestões publicadas.", null));
         }
 
         var comentarios = await _db.Comentarios
@@ -48,36 +46,34 @@ public class ComentariosController : ControllerBase
             .Select(c => new ComentarioDto(c.Id, c.SugestaoId, c.UsuarioId, c.Usuario!.Nome, c.Texto, c.DataCriacao))
             .ToListAsync();
 
-        return Ok(comentarios);
+        return Ok(new ListarComentariosResponse(false, null, comentarios));
     }
 
-    /// <summary>
-    /// Cria um comentário. Cliente e Admin podem comentar (tabela de permissões, seção 6 do PRD).
-    /// </summary>
-    [HttpPost]
-    public async Task<ActionResult<ComentarioDto>> Criar(int sugestaoId, CreateComentarioRequest request)
+    /// <summary>Cria um comentário. Cliente e Admin podem comentar (tabela de permissões, seção 6 do PRD).</summary>
+    [HttpPost("salvar")]
+    public async Task<ActionResult<ComentarioResponse>> Salvar(int sugestaoId, CreateComentarioRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Texto))
         {
-            return BadRequest("Texto é obrigatório.");
+            return Ok(new ComentarioResponse(true, "Texto é obrigatório.", null));
         }
 
         var sugestao = await _db.Sugestoes.FindAsync(sugestaoId);
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new ComentarioResponse(true, "Sugestão não encontrada.", null));
         }
 
         if (sugestao.Status != StatusSugestao.Publicada)
         {
-            return Conflict("Só é possível comentar em sugestões publicadas.");
+            return Ok(new ComentarioResponse(true, "Só é possível comentar em sugestões publicadas.", null));
         }
 
         var currentUserId = CurrentUserId();
         var autor = await _db.Usuarios.FindAsync(currentUserId);
         if (autor is null)
         {
-            return Unauthorized();
+            return Ok(new ComentarioResponse(true, "Usuário não encontrado.", null));
         }
 
         var comentario = new Comentario
@@ -102,26 +98,28 @@ public class ComentariosController : ControllerBase
         }
 
         var dto = new ComentarioDto(comentario.Id, sugestaoId, currentUserId, autor.Nome, comentario.Texto, comentario.DataCriacao);
-        return CreatedAtAction(nameof(Listar), new { sugestaoId }, dto);
+        return Ok(new ComentarioResponse(false, null, dto));
     }
 
-    /// <summary>
-    /// Remove um comentário (moderação reativa — só Admin, tabela de permissões seção 6 do PRD).
-    /// </summary>
-    [HttpDelete("{comentarioId}")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<IActionResult> Remover(int sugestaoId, int comentarioId)
+    /// <summary>Remove um comentário (moderação reativa — só Admin, tabela de permissões seção 6 do PRD).</summary>
+    [HttpPost("remover/{comentarioId}")]
+    public async Task<ActionResult<RemoverComentarioResponse>> Remover(int sugestaoId, int comentarioId)
     {
+        if (!User.IsInRole(nameof(RoleUsuario.AdminInterno)))
+        {
+            return Ok(new RemoverComentarioResponse(true, "Operação não permitida."));
+        }
+
         var comentario = await _db.Comentarios.FirstOrDefaultAsync(c => c.Id == comentarioId && c.SugestaoId == sugestaoId);
         if (comentario is null)
         {
-            return NotFound();
+            return Ok(new RemoverComentarioResponse(true, "Comentário não encontrado."));
         }
 
         _db.Comentarios.Remove(comentario);
         await _db.SaveChangesAsync();
 
-        return NoContent();
+        return Ok(new RemoverComentarioResponse(false, null));
     }
 
     private int CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

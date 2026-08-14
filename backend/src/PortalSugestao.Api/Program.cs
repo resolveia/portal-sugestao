@@ -14,13 +14,19 @@ const string CorsPolicy = "PortalSugestaoFrontend";
 // Add services to the container.
 
 builder.Services.AddControllers()
-    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        // Alinhado à convenção da plataforma (api_authentication/api_portal_sugestoes real):
+        // JSON em PascalCase, igual aos nomes das propriedades em C# (ver docs/api-contract.md).
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT emitido por /api/auth/mock-login. Informe apenas o token (sem o prefixo 'Bearer').",
+        Description = "JWT da sessão local (emitido por /api/auth/sessao). Informe apenas o token (sem o prefixo 'Bearer').",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
@@ -47,7 +53,6 @@ builder.Services.AddDbContext<PortalSugestaoDbContext>(options =>
 
 builder.Services.Configure<MockAuthOptions>(builder.Configuration.GetSection(MockAuthOptions.SectionName));
 builder.Services.AddScoped<MockTokenService>();
-builder.Services.AddSingleton<ErpTokenSimuladoService>();
 
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.AddScoped<NotificacaoService>();

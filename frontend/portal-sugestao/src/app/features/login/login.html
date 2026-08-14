@@ -5,28 +5,19 @@
       <p class="subtitulo">Sugira, vote e acompanhe as melhorias do ERP</p>
     </div>
 
-    <p class="aviso">
-      Login simulado (mock) — o SSO real com o ERP ainda depende de definição técnica (ver PRD).
-    </p>
-
     <div class="campo">
-      <label>E-mail</label>
-      <dx-text-box [(value)]="email" placeholder="cliente@empresa.com"></dx-text-box>
+      <label>ID</label>
+      <dx-text-box [(value)]="empresaId" placeholder="Identificador da empresa"></dx-text-box>
     </div>
 
     <div class="campo">
-      <label>Nome</label>
-      <dx-text-box [(value)]="nome" placeholder="Seu nome"></dx-text-box>
+      <label>Login</label>
+      <dx-text-box [(value)]="login" placeholder="Seu login"></dx-text-box>
     </div>
 
     <div class="campo">
-      <label>Empresa</label>
-      <dx-text-box [(value)]="empresa" placeholder="Nome da empresa"></dx-text-box>
-    </div>
-
-    <div class="campo">
-      <label>Perfil</label>
-      <dx-select-box [(value)]="role" [items]="roles"></dx-select-box>
+      <label>Senha</label>
+      <dx-text-box [(value)]="senha" mode="password" placeholder="Sua senha"></dx-text-box>
     </div>
 
     @if (erro()) {
@@ -41,22 +32,5 @@
       [disabled]="carregando()"
       (onClick)="entrar()"
     ></dx-button>
-
-    <div class="divisor">ou simule a entrada automática vinda do ERP</div>
-
-    <div class="botoes-simulacao">
-      <dx-button
-        text="Entrar como Admin (via ERP)"
-        width="100%"
-        [disabled]="simulando()"
-        (onClick)="simularEntradaViaErp('admin')"
-      ></dx-button>
-      <dx-button
-        text="Entrar como Cliente (via ERP)"
-        width="100%"
-        [disabled]="simulando()"
-        (onClick)="simularEntradaViaErp('cliente')"
-      ></dx-button>
-    </div>
   </div>
 </div>

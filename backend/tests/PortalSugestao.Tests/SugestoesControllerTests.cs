@@ -7,7 +7,7 @@ namespace PortalSugestao.Tests;
 public class SugestoesControllerTests
 {
     [Fact]
-    public async Task Criar_EntraComoEmModeracao()
+    public async Task Salvar_EntraComoEmModeracao()
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.sug1@empresa.com", "Admin", "Empresa", "AdminInterno");
@@ -15,19 +15,21 @@ public class SugestoesControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.sug1@empresa.com", "Cliente", "Empresa", "Cliente");
 
         var response = await cliente.PostAsJsonAsync(
-            "/api/sugestoes",
+            "/api/sugestoes/salvar",
             new { produtoId = 1, titulo = "Nova", descricao = "Desc", resultadoEsperado = "Resultado", categoriaId });
-        var dto = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var sugestao = body.GetProperty("Sugestao");
 
-        Assert.Equal("EmModeracao", dto.GetProperty("status").GetString());
-        Assert.Equal("AJORS.OOH", dto.GetProperty("produtoNome").GetString());
+        Assert.False(body.GetProperty("Erro").GetBoolean());
+        Assert.Equal("EmModeracao", sugestao.GetProperty("Status").GetString());
+        Assert.Equal("AJORS.OOH", sugestao.GetProperty("ProdutoNome").GetString());
     }
 
     [Theory]
     [InlineData("", "Desc", "Resultado")]
     [InlineData("Titulo", "", "Resultado")]
     [InlineData("Titulo", "Desc", "")]
-    public async Task Criar_CamposObrigatoriosVaziosDaBadRequest(string titulo, string descricao, string resultadoEsperado)
+    public async Task Salvar_CamposObrigatoriosVaziosDevolveErro(string titulo, string descricao, string resultadoEsperado)
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.sug4@empresa.com", "Admin", "Empresa", "AdminInterno");
@@ -35,14 +37,16 @@ public class SugestoesControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.sug4@empresa.com", "Cliente", "Empresa", "Cliente");
 
         var response = await cliente.PostAsJsonAsync(
-            "/api/sugestoes",
+            "/api/sugestoes/salvar",
             new { produtoId = 1, titulo, descricao, resultadoEsperado, categoriaId });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(body.GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
-    public async Task Criar_ProdutoInvalidoDaBadRequest()
+    public async Task Salvar_ProdutoInvalidoDevolveErro()
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.sug5@empresa.com", "Admin", "Empresa", "AdminInterno");
@@ -50,10 +54,12 @@ public class SugestoesControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.sug5@empresa.com", "Cliente", "Empresa", "Cliente");
 
         var response = await cliente.PostAsJsonAsync(
-            "/api/sugestoes",
+            "/api/sugestoes/salvar",
             new { produtoId = 9999, titulo = "T", descricao = "D", resultadoEsperado = "R", categoriaId });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(body.GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -66,11 +72,11 @@ public class SugestoesControllerTests
 
         var idNaoPublicada = await cliente.CriarSugestaoAsync(categoriaId, "Nao publicada");
         var idPublicada = await cliente.CriarSugestaoAsync(categoriaId, "Publicada");
-        await admin.PutAsync($"/api/sugestoes/{idPublicada}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{idPublicada}", new { });
 
-        var response = await cliente.GetAsync("/api/sugestoes");
-        var pagina = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var ids = pagina.GetProperty("items").EnumerateArray().Select(s => s.GetProperty("id").GetInt32()).ToList();
+        var response = await cliente.PostAsJsonAsync("/api/sugestoes/listar", new { Skip = 0, Take = 20 });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var ids = body.GetProperty("Sugestoes").EnumerateArray().Select(s => s.GetProperty("Id").GetInt32()).ToList();
 
         Assert.Contains(idPublicada, ids);
         Assert.DoesNotContain(idNaoPublicada, ids);
@@ -87,18 +93,18 @@ public class SugestoesControllerTests
         for (var i = 0; i < 5; i++)
         {
             var id = await cliente.CriarSugestaoAsync(categoriaId, $"Paginada {i}");
-            await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+            await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
         }
 
-        var pagina1 = await (await cliente.GetAsync("/api/sugestoes?skip=0&take=2")).Content.ReadFromJsonAsync<JsonElement>();
-        var pagina2 = await (await cliente.GetAsync("/api/sugestoes?skip=2&take=2")).Content.ReadFromJsonAsync<JsonElement>();
+        var pagina1 = await (await cliente.PostAsJsonAsync("/api/sugestoes/listar", new { Skip = 0, Take = 2 })).Content.ReadFromJsonAsync<JsonElement>();
+        var pagina2 = await (await cliente.PostAsJsonAsync("/api/sugestoes/listar", new { Skip = 2, Take = 2 })).Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(2, pagina1.GetProperty("items").GetArrayLength());
-        Assert.Equal(2, pagina2.GetProperty("items").GetArrayLength());
-        Assert.True(pagina1.GetProperty("total").GetInt32() >= 5);
+        Assert.Equal(2, pagina1.GetProperty("Sugestoes").GetArrayLength());
+        Assert.Equal(2, pagina2.GetProperty("Sugestoes").GetArrayLength());
+        Assert.True(pagina1.GetProperty("Total").GetInt32() >= 5);
 
-        var idsPagina1 = pagina1.GetProperty("items").EnumerateArray().Select(s => s.GetProperty("id").GetInt32()).ToList();
-        var idsPagina2 = pagina2.GetProperty("items").EnumerateArray().Select(s => s.GetProperty("id").GetInt32()).ToList();
+        var idsPagina1 = pagina1.GetProperty("Sugestoes").EnumerateArray().Select(s => s.GetProperty("Id").GetInt32()).ToList();
+        var idsPagina2 = pagina2.GetProperty("Sugestoes").EnumerateArray().Select(s => s.GetProperty("Id").GetInt32()).ToList();
         Assert.Empty(idsPagina1.Intersect(idsPagina2));
     }
 
@@ -113,21 +119,21 @@ public class SugestoesControllerTests
 
         var id = await autor.CriarSugestaoAsync(categoriaId, "Original");
 
-        var respostaOutro = await outroCliente.PutAsJsonAsync(
-            $"/api/sugestoes/{id}",
+        var respostaOutro = await outroCliente.PostAsJsonAsync(
+            $"/api/sugestoes/editar/{id}",
             new { produtoId = 1, titulo = "Hack", descricao = "Hack", resultadoEsperado = "Hack", categoriaId });
-        Assert.Equal(HttpStatusCode.Forbidden, respostaOutro.StatusCode);
+        Assert.True((await respostaOutro.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        var respostaAutor = await autor.PutAsJsonAsync(
-            $"/api/sugestoes/{id}",
+        var respostaAutor = await autor.PostAsJsonAsync(
+            $"/api/sugestoes/editar/{id}",
             new { produtoId = 1, titulo = "Editado", descricao = "Editado", resultadoEsperado = "Editado", categoriaId });
-        Assert.Equal(HttpStatusCode.OK, respostaAutor.StatusCode);
+        Assert.False((await respostaAutor.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
 
-        var respostaPosModeracao = await autor.PutAsJsonAsync(
-            $"/api/sugestoes/{id}",
+        var respostaPosModeracao = await autor.PostAsJsonAsync(
+            $"/api/sugestoes/editar/{id}",
             new { produtoId = 1, titulo = "Tarde demais", descricao = "x", resultadoEsperado = "x", categoriaId });
-        Assert.Equal(HttpStatusCode.Conflict, respostaPosModeracao.StatusCode);
+        Assert.True((await respostaPosModeracao.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 }

@@ -31,14 +31,6 @@
   }
 }
 
-.aviso {
-  font-size: 0.8rem;
-  color: var(--ps-color-text-muted);
-  background-color: var(--ps-color-bg);
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-
 .campo {
   display: flex;
   flex-direction: column;
@@ -57,17 +49,4 @@
 
 .botao-entrar {
   margin-top: 8px;
-}
-
-.divisor {
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--ps-color-text-muted);
-  margin-top: 4px;
-}
-
-.botoes-simulacao {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }

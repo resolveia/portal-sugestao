@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -14,20 +13,20 @@ public class ComentariosControllerTests
         var categoriaId = await admin.CriarCategoriaAsync();
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.com1@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
 
-        var respostaCliente = await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios", new { texto = "Comentario cliente" });
-        var respostaAdmin = await admin.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios", new { texto = "Comentario admin" });
+        var respostaCliente = await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/salvar", new { texto = "Comentario cliente" });
+        var respostaAdmin = await admin.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/salvar", new { texto = "Comentario admin" });
 
-        Assert.Equal(HttpStatusCode.Created, respostaCliente.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, respostaAdmin.StatusCode);
+        Assert.False((await respostaCliente.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
+        Assert.False((await respostaAdmin.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        var lista = await (await cliente.GetAsync($"/api/sugestoes/{id}/comentarios")).Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(2, lista.GetArrayLength());
+        var lista = await (await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/listar", new { })).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, lista.GetProperty("Comentarios").GetArrayLength());
     }
 
     [Fact]
-    public async Task Comentar_EmSugestaoNaoPublicadaDaConflito()
+    public async Task Comentar_EmSugestaoNaoPublicadaDevolveErro()
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.com2@empresa.com", "Admin", "Empresa", "AdminInterno");
@@ -35,9 +34,9 @@ public class ComentariosControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.com2@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
 
-        var response = await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios", new { texto = "Nao deveria funcionar" });
+        var response = await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/salvar", new { texto = "Nao deveria funcionar" });
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.True((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -48,15 +47,15 @@ public class ComentariosControllerTests
         var categoriaId = await admin.CriarCategoriaAsync();
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.com3@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
 
-        var criado = await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios", new { texto = "Comentario" });
-        var comentarioId = (await criado.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+        var criado = await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/salvar", new { texto = "Comentario" });
+        var comentarioId = (await criado.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Comentario").GetProperty("Id").GetInt32();
 
-        var tentativaCliente = await cliente.DeleteAsync($"/api/sugestoes/{id}/comentarios/{comentarioId}");
-        Assert.Equal(HttpStatusCode.Forbidden, tentativaCliente.StatusCode);
+        var tentativaCliente = await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/remover/{comentarioId}", new { });
+        Assert.True((await tentativaCliente.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        var tentativaAdmin = await admin.DeleteAsync($"/api/sugestoes/{id}/comentarios/{comentarioId}");
-        Assert.Equal(HttpStatusCode.NoContent, tentativaAdmin.StatusCode);
+        var tentativaAdmin = await admin.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/remover/{comentarioId}", new { });
+        Assert.False((await tentativaAdmin.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 }

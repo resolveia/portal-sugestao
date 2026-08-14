@@ -1,10 +1,30 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, map, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginTokenResponse, MockLoginRequest, MockLoginResponse, TokensDemoResponse, UsuarioLogado } from '../models/usuario.model';
+import { UsuarioLogado } from '../models/usuario.model';
 
 const STORAGE_KEY = 'portal-sugestao.auth';
+
+/** Formato devolvido pela api_authentication real (docs/autenticacao-e-api-portal-sugestoes.md). */
+interface LoginErpResponse {
+  Erro: boolean;
+  Mensagem?: string | null;
+  Usuario?: {
+    Nome: string;
+    Login: string;
+    Id: number;
+    EmpresaId: string;
+    AdminPortalSugestoes: boolean;
+  };
+}
+
+/** Formato do nosso próprio backend (dublê local de api_portal_sugestoes). */
+interface SessaoResponse {
+  Erro: boolean;
+  Mensagem?: string | null;
+  Usuario?: { Id: number; Nome: string; Email: string; Role: 'Cliente' | 'AdminInterno' };
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -13,29 +33,48 @@ export class AuthService {
 
   constructor(private readonly http: HttpClient) {}
 
-  /** Login manual (formulário) — continua existindo em paralelo ao login automático via token. */
-  login(request: MockLoginRequest): Observable<MockLoginResponse> {
-    return this.http.post<MockLoginResponse>(`${environment.apiUrl}/auth/mock-login`, request, { withCredentials: true }).pipe(
-      tap((response) =>
-        this.armazenarUsuario({ id: response.usuarioId, nome: response.nome, email: response.email, role: response.role })
+  /**
+   * Login contra a api_authentication real (ou o simulador local dela, environment.authApiUrl) e,
+   * em seguida, estabelece a sessão local no nosso backend (dublê de api_portal_sugestoes) com os
+   * dados devolvidos — ver docs/autenticacao-e-api-portal-sugestoes.md.
+   */
+  login(empresaId: string, login: string, senha: string): Observable<UsuarioLogado> {
+    const idioma = encodeURIComponent(navigator.language);
+
+    return this.http
+      .post<LoginErpResponse>(
+        `${environment.authApiUrl}/authentication/logar?idioma=${idioma}`,
+        { EmpresaID: empresaId, Login: login, Senha: senha, Modulo: '' },
+        { withCredentials: true }
       )
-    );
-  }
+      .pipe(
+        switchMap((respErp) => {
+          if (respErp.Erro || !respErp.Usuario) {
+            return throwError(() => new Error(respErp.Mensagem ?? 'Não foi possível autenticar.'));
+          }
 
-  /** Login automático via token — equivalente ao fluxo real de SSO do ERP (token hoje simulado). */
-  loginViaToken(token: string): Observable<LoginTokenResponse> {
-    return this.http.post<LoginTokenResponse>(`${environment.apiUrl}/auth/login-token`, { token }, { withCredentials: true }).pipe(
-      tap((response) => {
-        if (!response.erro && response.usuario) {
-          this.armazenarUsuario(response.usuario);
-        }
-      })
-    );
-  }
+          const u = respErp.Usuario;
+          return this.http.post<SessaoResponse>(
+            `${environment.apiUrl}/auth/sessao`,
+            { Nome: u.Nome, Login: u.Login, Id: u.Id, EmpresaId: u.EmpresaId, AdminPortalSugestoes: u.AdminPortalSugestoes },
+            { withCredentials: true }
+          );
+        }),
+        map((respSessao) => {
+          if (respSessao.Erro || !respSessao.Usuario) {
+            throw new Error(respSessao.Mensagem ?? 'Não foi possível iniciar a sessão local.');
+          }
 
-  /** Tokens de demonstração (Admin/Cliente) pra simular a entrada vinda do ERP — remover quando o SSO real existir. */
-  tokensDemo(): Observable<TokensDemoResponse> {
-    return this.http.get<TokensDemoResponse>(`${environment.apiUrl}/auth/tokens-demo`);
+          const usuario: UsuarioLogado = {
+            id: respSessao.Usuario.Id,
+            nome: respSessao.Usuario.Nome,
+            email: respSessao.Usuario.Email,
+            role: respSessao.Usuario.Role
+          };
+          this.armazenarUsuario(usuario);
+          return usuario;
+        })
+      );
   }
 
   logout(): void {

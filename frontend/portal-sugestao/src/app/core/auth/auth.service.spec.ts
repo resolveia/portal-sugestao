@@ -2,24 +2,33 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
-import { LoginTokenResponse, MockLoginResponse, TokensDemoResponse, UsuarioLogado } from '../models/usuario.model';
+import { UsuarioLogado } from '../models/usuario.model';
 import { environment } from '../../../environments/environment';
 
 const STORAGE_KEY = 'portal-sugestao.auth';
 
-const RESPOSTA_MOCK: MockLoginResponse = {
-  token: 'token-fake',
-  expiresAt: '2026-01-01T00:00:00Z',
-  usuarioId: 1,
-  nome: 'Cliente Teste',
-  email: 'cliente@empresa.com',
-  role: 'Cliente'
+const RESPOSTA_ERP = {
+  Erro: false,
+  Mensagem: null,
+  Usuario: {
+    Nome: 'Cliente Teste',
+    Login: 'cliente.teste',
+    Id: 1,
+    EmpresaId: 'EMP1',
+    AdminPortalSugestoes: false
+  }
+};
+
+const RESPOSTA_SESSAO = {
+  Erro: false,
+  Mensagem: null,
+  Usuario: { Id: 1, Nome: 'Cliente Teste', Email: 'cliente.teste@erp.local', Role: 'Cliente' as const }
 };
 
 const USUARIO_ESPERADO: UsuarioLogado = {
   id: 1,
   nome: 'Cliente Teste',
-  email: 'cliente@empresa.com',
+  email: 'cliente.teste@erp.local',
   role: 'Cliente'
 };
 
@@ -39,62 +48,67 @@ describe('AuthService', () => {
     localStorage.clear();
   });
 
-  it('login() grava o usuário no localStorage e atualiza o signal usuario, com withCredentials', () => {
+  it('login() autentica na api_authentication, estabelece a sessão local e grava o usuário', () => {
     const service = TestBed.inject(AuthService);
 
-    service.login({ email: RESPOSTA_MOCK.email, nome: RESPOSTA_MOCK.nome, empresa: 'Empresa', role: 'Cliente' })
-      .subscribe();
+    service.login('EMP1', 'cliente.teste', 'senha123').subscribe();
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/auth/mock-login`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.withCredentials).toBe(true);
-    req.flush(RESPOSTA_MOCK);
+    const reqErp = httpMock.expectOne((r) => r.url.startsWith(`${environment.authApiUrl}/authentication/logar`));
+    expect(reqErp.request.method).toBe('POST');
+    expect(reqErp.request.withCredentials).toBe(true);
+    expect(reqErp.request.body).toEqual({ EmpresaID: 'EMP1', Login: 'cliente.teste', Senha: 'senha123', Modulo: '' });
+    reqErp.flush(RESPOSTA_ERP);
+
+    const reqSessao = httpMock.expectOne(`${environment.apiUrl}/auth/sessao`);
+    expect(reqSessao.request.method).toBe('POST');
+    expect(reqSessao.request.withCredentials).toBe(true);
+    expect(reqSessao.request.body).toEqual({
+      Nome: 'Cliente Teste',
+      Login: 'cliente.teste',
+      Id: 1,
+      EmpresaId: 'EMP1',
+      AdminPortalSugestoes: false
+    });
+    reqSessao.flush(RESPOSTA_SESSAO);
 
     expect(service.usuario()).toEqual(USUARIO_ESPERADO);
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toEqual(USUARIO_ESPERADO);
     expect(service.isAuthenticated()).toBe(true);
   });
 
-  it('loginViaToken() com sucesso grava o usuário e atualiza o signal', () => {
+  it('login() com erro da api_authentication não grava usuário nenhum', () => {
     const service = TestBed.inject(AuthService);
-    const resposta: LoginTokenResponse = { erro: false, mensagem: null, usuario: USUARIO_ESPERADO };
+    let erroRecebido: Error | undefined;
 
-    service.loginViaToken('token-simulado-do-erp').subscribe();
+    service.login('EMP1', 'cliente.teste', 'senha-errada').subscribe({
+      error: (erro) => (erroRecebido = erro)
+    });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/auth/login-token`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ token: 'token-simulado-do-erp' });
-    req.flush(resposta);
+    const reqErp = httpMock.expectOne((r) => r.url.startsWith(`${environment.authApiUrl}/authentication/logar`));
+    reqErp.flush({ Erro: true, Mensagem: 'Usuário ou senha inválidos.', Usuario: null });
 
-    expect(service.usuario()).toEqual(USUARIO_ESPERADO);
-    expect(service.isAuthenticated()).toBe(true);
-  });
-
-  it('loginViaToken() com erro não grava usuário nenhum', () => {
-    const service = TestBed.inject(AuthService);
-    const resposta: LoginTokenResponse = { erro: true, mensagem: 'Token inválido.', usuario: null };
-
-    service.loginViaToken('token-invalido').subscribe();
-
-    const req = httpMock.expectOne(`${environment.apiUrl}/auth/login-token`);
-    req.flush(resposta);
-
+    expect(erroRecebido?.message).toBe('Usuário ou senha inválidos.');
     expect(service.usuario()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
   });
 
-  it('tokensDemo() busca os tokens de demonstração', () => {
+  it('login() com erro ao estabelecer a sessão local não grava usuário nenhum', () => {
     const service = TestBed.inject(AuthService);
-    const resposta: TokensDemoResponse = { admin: 'token-admin', cliente: 'token-cliente' };
-    let recebido: TokensDemoResponse | undefined;
+    let erroRecebido: Error | undefined;
 
-    service.tokensDemo().subscribe((r) => (recebido = r));
+    service.login('EMP1', 'cliente.teste', 'senha123').subscribe({
+      error: (erro) => (erroRecebido = erro)
+    });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/auth/tokens-demo`);
-    expect(req.request.method).toBe('GET');
-    req.flush(resposta);
+    const reqErp = httpMock.expectOne((r) => r.url.startsWith(`${environment.authApiUrl}/authentication/logar`));
+    reqErp.flush(RESPOSTA_ERP);
 
-    expect(recebido).toEqual(resposta);
+    const reqSessao = httpMock.expectOne(`${environment.apiUrl}/auth/sessao`);
+    reqSessao.flush({ Erro: true, Mensagem: 'Não foi possível iniciar a sessão local.', Usuario: null });
+
+    expect(erroRecebido?.message).toBe('Não foi possível iniciar a sessão local.');
+    expect(service.usuario()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
   });
 
   it('logout() chama a API, limpa o signal e o localStorage', () => {

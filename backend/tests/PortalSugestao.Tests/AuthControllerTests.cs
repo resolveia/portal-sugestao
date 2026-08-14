@@ -6,94 +6,78 @@ namespace PortalSugestao.Tests;
 public class AuthControllerTests
 {
     [Fact]
-    public async Task MockLogin_CriaUsuarioEDevolveTokenValido()
+    public async Task Sessao_CriaUsuarioEDefineCookieDeSessao()
     {
         await using var factory = new CustomWebApplicationFactory();
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/auth/mock-login", new
+        var response = await client.PostAsJsonAsync("/api/auth/sessao", new
         {
-            email = "auth.teste@empresa.com",
-            nome = "Auth Teste",
-            empresa = "Empresa Exemplo",
-            role = "Cliente"
+            Nome = "Auth Teste",
+            Login = "auth.teste",
+            Id = 123,
+            EmpresaId = "EMP1",
+            AdminPortalSugestoes = false
         });
 
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("token").GetString()));
-        Assert.Equal("auth.teste@empresa.com", body.GetProperty("email").GetString());
-        Assert.Equal("Cliente", body.GetProperty("role").GetString());
-    }
+        Assert.False(body.GetProperty("Erro").GetBoolean());
+        Assert.Equal("Auth Teste", body.GetProperty("Usuario").GetProperty("Nome").GetString());
+        Assert.Equal("Cliente", body.GetProperty("Usuario").GetProperty("Role").GetString());
 
-    [Fact]
-    public async Task MockLogin_MesmoEmailNaoDuplicaUsuario()
-    {
-        await using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
-        var request = new { email = "duplicado@empresa.com", nome = "Nome", empresa = "Empresa", role = "Cliente" };
-
-        var r1 = await client.PostAsJsonAsync("/api/auth/mock-login", request);
-        var r2 = await client.PostAsJsonAsync("/api/auth/mock-login", request);
-
-        var id1 = (await r1.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("usuarioId").GetInt32();
-        var id2 = (await r2.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("usuarioId").GetInt32();
-
-        Assert.Equal(id1, id2);
-    }
-
-    [Fact]
-    public async Task MockLogin_DefineCookieHttpOnlyDeSessao()
-    {
-        await using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
-
-        var response = await client.PostAsJsonAsync("/api/auth/mock-login", new
-        {
-            email = "cookie.teste@empresa.com",
-            nome = "Cookie Teste",
-            empresa = "Empresa Exemplo",
-            role = "Cliente"
-        });
-
-        response.EnsureSuccessStatusCode();
         var setCookie = Assert.Single(response.Headers.GetValues("Set-Cookie"));
         Assert.Contains("portal_sugestao_session=", setCookie);
         Assert.Contains("httponly", setCookie, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task TokensDemo_RetornaTokensParaAdminEClienteQueLogamComSucesso()
+    public async Task Sessao_MesmaEmpresaEIdNaoDuplicaUsuario()
     {
         await using var factory = new CustomWebApplicationFactory();
         var client = factory.CreateClient();
+        var request = new { Nome = "Nome", Login = "login.dup", Id = 999, EmpresaId = "EMP2", AdminPortalSugestoes = false };
 
-        var demo = await (await client.GetAsync("/api/auth/tokens-demo")).Content.ReadFromJsonAsync<JsonElement>();
-        var tokenAdmin = demo.GetProperty("admin").GetString();
-        var tokenCliente = demo.GetProperty("cliente").GetString();
+        var r1 = await client.PostAsJsonAsync("/api/auth/sessao", request);
+        var r2 = await client.PostAsJsonAsync("/api/auth/sessao", request);
 
-        var respAdmin = await client.PostAsJsonAsync("/api/auth/login-token", new { token = tokenAdmin });
-        var bodyAdmin = await respAdmin.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(bodyAdmin.GetProperty("erro").GetBoolean());
-        Assert.Equal("AdminInterno", bodyAdmin.GetProperty("usuario").GetProperty("role").GetString());
+        var id1 = (await r1.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Usuario").GetProperty("Id").GetInt32();
+        var id2 = (await r2.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Usuario").GetProperty("Id").GetInt32();
 
-        var respCliente = await client.PostAsJsonAsync("/api/auth/login-token", new { token = tokenCliente });
-        var bodyCliente = await respCliente.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(bodyCliente.GetProperty("erro").GetBoolean());
-        Assert.Equal("Cliente", bodyCliente.GetProperty("usuario").GetProperty("role").GetString());
+        Assert.Equal(id1, id2);
     }
 
     [Fact]
-    public async Task LoginToken_ComTokenInvalido_Retorna200ComErroTrue()
+    public async Task Sessao_AdminPortalSugestoesTrueViraRoleAdminInterno()
     {
         await using var factory = new CustomWebApplicationFactory();
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/auth/login-token", new { token = "isso-nao-e-um-token-valido" });
+        var response = await client.PostAsJsonAsync("/api/auth/sessao", new
+        {
+            Nome = "Admin Teste",
+            Login = "admin.teste",
+            Id = 456,
+            EmpresaId = "EMP1",
+            AdminPortalSugestoes = true
+        });
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("AdminInterno", body.GetProperty("Usuario").GetProperty("Role").GetString());
+    }
+
+    [Fact]
+    public async Task Logout_LimpaOCookieDeSessao()
+    {
+        await using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/logout", new { });
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(body.GetProperty("erro").GetBoolean());
+        var setCookie = Assert.Single(response.Headers.GetValues("Set-Cookie"));
+        Assert.Contains("portal_sugestao_session=", setCookie);
+        Assert.Contains("expires=Thu, 01 Jan 1970", setCookie, StringComparison.OrdinalIgnoreCase);
     }
 }

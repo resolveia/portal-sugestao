@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -9,7 +8,7 @@ public class VotosControllerTests
     private static async Task<int> CriarEPublicarAsync(HttpClient admin, HttpClient autor, int categoriaId, string titulo)
     {
         var id = await autor.CriarSugestaoAsync(categoriaId, titulo);
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
         return id;
     }
 
@@ -22,19 +21,19 @@ public class VotosControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.vot1@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await CriarEPublicarAsync(admin, cliente, categoriaId, "Sugestao 1");
 
-        var response = await cliente.PostAsync($"/api/sugestoes/{id}/votos", null);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var response = await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id}", new { });
+        Assert.False((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        var ranking = await (await cliente.GetAsync("/api/sugestoes")).Content.ReadFromJsonAsync<JsonElement>();
-        var item = ranking.GetProperty("items").EnumerateArray().First(s => s.GetProperty("id").GetInt32() == id);
+        var ranking = await (await cliente.PostAsJsonAsync("/api/sugestoes/listar", new { Skip = 0, Take = 20 })).Content.ReadFromJsonAsync<JsonElement>();
+        var item = ranking.GetProperty("Sugestoes").EnumerateArray().First(s => s.GetProperty("Id").GetInt32() == id);
 
-        Assert.Equal(1, item.GetProperty("totalVotos").GetInt32());
-        Assert.True(item.GetProperty("votadoPorMim").GetBoolean());
-        Assert.Equal(1, ranking.GetProperty("votosUsadosPeloUsuarioAtual").GetInt32());
+        Assert.Equal(1, item.GetProperty("TotalVotos").GetInt32());
+        Assert.True(item.GetProperty("VotadoPorMim").GetBoolean());
+        Assert.Equal(1, ranking.GetProperty("VotosUsadosPeloUsuarioAtual").GetInt32());
     }
 
     [Fact]
-    public async Task Votar_DuasVezesNaMesmaSugestaoDaConflito()
+    public async Task Votar_DuasVezesNaMesmaSugestaoDevolveErro()
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.vot2@empresa.com", "Admin", "Empresa", "AdminInterno");
@@ -42,10 +41,10 @@ public class VotosControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.vot2@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await CriarEPublicarAsync(admin, cliente, categoriaId, "Sugestao 1");
 
-        await cliente.PostAsync($"/api/sugestoes/{id}/votos", null);
-        var segundo = await cliente.PostAsync($"/api/sugestoes/{id}/votos", null);
+        await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id}", new { });
+        var segundo = await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id}", new { });
 
-        Assert.Equal(HttpStatusCode.Conflict, segundo.StatusCode);
+        Assert.True((await segundo.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -61,18 +60,18 @@ public class VotosControllerTests
         var id3 = await CriarEPublicarAsync(admin, cliente, categoriaId, "S3");
         var id4 = await CriarEPublicarAsync(admin, cliente, categoriaId, "S4");
 
-        await cliente.PostAsync($"/api/sugestoes/{id1}/votos", null);
-        await cliente.PostAsync($"/api/sugestoes/{id2}/votos", null);
-        await cliente.PostAsync($"/api/sugestoes/{id3}/votos", null);
+        await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id1}", new { });
+        await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id2}", new { });
+        await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id3}", new { });
 
-        var quarto = await cliente.PostAsync($"/api/sugestoes/{id4}/votos", null);
-        Assert.Equal(HttpStatusCode.Conflict, quarto.StatusCode);
+        var quarto = await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id4}", new { });
+        Assert.True((await quarto.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        var remover = await cliente.DeleteAsync($"/api/sugestoes/{id1}/votos");
-        Assert.Equal(HttpStatusCode.OK, remover.StatusCode);
+        var remover = await cliente.PostAsJsonAsync($"/api/sugestoes/removervoto/{id1}", new { });
+        Assert.False((await remover.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        var realocado = await cliente.PostAsync($"/api/sugestoes/{id4}/votos", null);
-        Assert.Equal(HttpStatusCode.OK, realocado.StatusCode);
+        var realocado = await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id4}", new { });
+        Assert.False((await realocado.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -84,8 +83,8 @@ public class VotosControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.vot4@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await CriarEPublicarAsync(admin, cliente, categoriaId, "S1");
 
-        var response = await admin.PostAsync($"/api/sugestoes/{id}/votos", null);
+        var response = await admin.PostAsJsonAsync($"/api/sugestoes/votar/{id}", new { });
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.True((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 }

@@ -29,17 +29,14 @@ public class SugestoesController : ControllerBase
 
     /// <summary>
     /// Lista sugestões publicadas, ordenadas por número de votos (ranking — seção 5.4 do PRD).
-    /// Paginado no servidor (RNF seção 11 — ver docs/performance-report.md: sem paginação, o payload
-    /// cresce com o total de sugestões publicadas e vira o próximo gargalo depois da otimização de
-    /// query). VotosUsadosPeloUsuarioAtual vem à parte do total de votos ativos do usuário (regra 7.2),
-    /// já que o limite de 3 é sobre o total, não sobre a página atual.
+    /// Paginado no servidor (RNF seção 11 — ver docs/performance-report.md).
     /// </summary>
-    [HttpGet]
-    public async Task<ActionResult<SugestoesPaginadasDto>> Listar(int skip = 0, int take = 20)
+    [HttpPost("listar")]
+    public async Task<ActionResult<ListarSugestoesResponse>> Listar(ListarSugestoesRequest request)
     {
         var currentUserId = CurrentUserId();
-        skip = Math.Max(0, skip);
-        take = Math.Clamp(take, 1, TamanhoPaginaMaximo);
+        var skip = Math.Max(0, request.Skip);
+        var take = Math.Clamp(request.Take <= 0 ? 20 : request.Take, 1, TamanhoPaginaMaximo);
 
         var query = _db.Sugestoes
             .AsNoTracking()
@@ -52,38 +49,26 @@ public class SugestoesController : ControllerBase
             .Skip(skip)
             .Take(take)
             .Select(s => new SugestaoDto(
-                s.Id,
-                s.Titulo,
-                s.Descricao,
-                s.ResultadoEsperado,
-                s.ProdutoId,
-                s.Produto!.Nome,
-                s.CategoriaId,
-                s.Categoria!.Nome,
-                s.AutorId,
-                s.Autor!.Nome,
-                s.Status,
-                s.EstagioRoadmap,
-                s.DataCriacao,
-                s.Votos.Count,
-                s.Votos.Any(v => v.UsuarioId == currentUserId),
-                s.DataModeracao,
-                s.MotivoRejeicao,
-                s.Moderador == null ? null : s.Moderador.Nome))
+                s.Id, s.Titulo, s.Descricao, s.ResultadoEsperado, s.ProdutoId, s.Produto!.Nome,
+                s.CategoriaId, s.Categoria!.Nome, s.AutorId, s.Autor!.Nome, s.Status, s.EstagioRoadmap,
+                s.DataCriacao, s.Votos.Count, s.Votos.Any(v => v.UsuarioId == currentUserId),
+                s.DataModeracao, s.MotivoRejeicao, s.Moderador == null ? null : s.Moderador.Nome))
             .ToListAsync();
 
         var votosUsados = await _db.Votos.CountAsync(v => v.UsuarioId == currentUserId);
 
-        return Ok(new SugestoesPaginadasDto(sugestoes, total, votosUsados));
+        return Ok(new ListarSugestoesResponse(false, null, sugestoes, total, votosUsados));
     }
 
-    /// <summary>
-    /// Fila de moderação: sugestões ainda não aprovadas/rejeitadas (regra 7.1 do PRD).
-    /// </summary>
-    [HttpGet("pendentes")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<ActionResult<IEnumerable<SugestaoDto>>> Pendentes()
+    /// <summary>Fila de moderação: sugestões ainda não aprovadas/rejeitadas (regra 7.1 do PRD).</summary>
+    [HttpPost("pendentes")]
+    public async Task<ActionResult<PendentesResponse>> Pendentes()
     {
+        if (!IsAdmin())
+        {
+            return Ok(new PendentesResponse(true, "Operação não permitida.", null));
+        }
+
         var currentUserId = CurrentUserId();
 
         var sugestoes = await _db.Sugestoes
@@ -91,56 +76,40 @@ public class SugestoesController : ControllerBase
             .Where(s => s.Status == StatusSugestao.EmModeracao)
             .OrderBy(s => s.DataCriacao)
             .Select(s => new SugestaoDto(
-                s.Id,
-                s.Titulo,
-                s.Descricao,
-                s.ResultadoEsperado,
-                s.ProdutoId,
-                s.Produto!.Nome,
-                s.CategoriaId,
-                s.Categoria!.Nome,
-                s.AutorId,
-                s.Autor!.Nome,
-                s.Status,
-                s.EstagioRoadmap,
-                s.DataCriacao,
-                s.Votos.Count,
-                s.Votos.Any(v => v.UsuarioId == currentUserId),
-                s.DataModeracao,
-                s.MotivoRejeicao,
-                s.Moderador == null ? null : s.Moderador.Nome))
+                s.Id, s.Titulo, s.Descricao, s.ResultadoEsperado, s.ProdutoId, s.Produto!.Nome,
+                s.CategoriaId, s.Categoria!.Nome, s.AutorId, s.Autor!.Nome, s.Status, s.EstagioRoadmap,
+                s.DataCriacao, s.Votos.Count, s.Votos.Any(v => v.UsuarioId == currentUserId),
+                s.DataModeracao, s.MotivoRejeicao, s.Moderador == null ? null : s.Moderador.Nome))
             .ToListAsync();
 
-        return Ok(sugestoes);
+        return Ok(new PendentesResponse(false, null, sugestoes));
     }
 
-    /// <summary>
-    /// Cadastra uma nova sugestão, sempre entrando com status "Em moderação" (regra 7.1 do PRD).
-    /// </summary>
-    [HttpPost]
-    public async Task<ActionResult<SugestaoDto>> Criar(CreateSugestaoRequest request)
+    /// <summary>Cadastra uma nova sugestão, sempre entrando com status "Em moderação" (regra 7.1 do PRD).</summary>
+    [HttpPost("salvar")]
+    public async Task<ActionResult<SugestaoResponse>> Salvar(CreateSugestaoRequest request)
     {
         if (!CamposObrigatoriosValidos(request.Titulo, request.Descricao, request.ResultadoEsperado))
         {
-            return BadRequest("Título, descrição e resultado esperado são obrigatórios.");
+            return Ok(new SugestaoResponse(true, "Título, descrição e resultado esperado são obrigatórios.", null));
         }
 
         var produto = await _db.Produtos.FindAsync(request.ProdutoId);
         if (produto is null)
         {
-            return BadRequest("Produto inválido.");
+            return Ok(new SugestaoResponse(true, "Produto inválido.", null));
         }
 
         var categoria = await _db.Categorias.FindAsync(request.CategoriaId);
         if (categoria is null)
         {
-            return BadRequest("Categoria inválida.");
+            return Ok(new SugestaoResponse(true, "Categoria inválida.", null));
         }
 
         var autor = await _db.Usuarios.FindAsync(CurrentUserId());
         if (autor is null)
         {
-            return Unauthorized();
+            return Ok(new SugestaoResponse(true, "Usuário não encontrado.", null));
         }
 
         var sugestao = new Sugestao
@@ -161,54 +130,46 @@ public class SugestoesController : ControllerBase
         sugestao.Categoria = categoria;
         sugestao.Autor = autor;
 
-        return CreatedAtAction(nameof(Listar), ToDto(sugestao, autor.Id));
+        return Ok(new SugestaoResponse(false, null, ToDto(sugestao, autor.Id)));
     }
 
-    /// <summary>
-    /// Edição pela própria pessoa autora, permitida apenas enquanto a sugestão ainda está em moderação.
-    /// </summary>
-    [HttpPut("{id}")]
-    public async Task<ActionResult<SugestaoDto>> Editar(int id, CreateSugestaoRequest request)
+    /// <summary>Edição pela própria pessoa autora, permitida apenas enquanto a sugestão ainda está em moderação.</summary>
+    [HttpPost("editar/{id}")]
+    public async Task<ActionResult<SugestaoResponse>> Editar(int id, CreateSugestaoRequest request)
     {
         if (!CamposObrigatoriosValidos(request.Titulo, request.Descricao, request.ResultadoEsperado))
         {
-            return BadRequest("Título, descrição e resultado esperado são obrigatórios.");
+            return Ok(new SugestaoResponse(true, "Título, descrição e resultado esperado são obrigatórios.", null));
         }
 
         var currentUserId = CurrentUserId();
-
-        var sugestao = await _db.Sugestoes
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var sugestao = await CarregarSugestaoAsync(id);
 
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new SugestaoResponse(true, "Sugestão não encontrada.", null));
         }
 
         if (sugestao.AutorId != currentUserId)
         {
-            return Forbid();
+            return Ok(new SugestaoResponse(true, "Operação não permitida.", null));
         }
 
         if (sugestao.Status != StatusSugestao.EmModeracao)
         {
-            return Conflict("Sugestão já foi moderada e não pode mais ser editada.");
+            return Ok(new SugestaoResponse(true, "Sugestão já foi moderada e não pode mais ser editada.", null));
         }
 
         var produto = await _db.Produtos.FindAsync(request.ProdutoId);
         if (produto is null)
         {
-            return BadRequest("Produto inválido.");
+            return Ok(new SugestaoResponse(true, "Produto inválido.", null));
         }
 
         var categoria = await _db.Categorias.FindAsync(request.CategoriaId);
         if (categoria is null)
         {
-            return BadRequest("Categoria inválida.");
+            return Ok(new SugestaoResponse(true, "Categoria inválida.", null));
         }
 
         sugestao.Titulo = request.Titulo;
@@ -221,33 +182,29 @@ public class SugestoesController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        return Ok(ToDto(sugestao, currentUserId));
+        return Ok(new SugestaoResponse(false, null, ToDto(sugestao, currentUserId)));
     }
 
-    /// <summary>
-    /// Aprova uma sugestão em moderação, publicando-a (regra 7.1 do PRD).
-    /// </summary>
-    [HttpPut("{id}/aprovar")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<ActionResult<SugestaoDto>> Aprovar(int id)
+    /// <summary>Aprova uma sugestão em moderação, publicando-a (regra 7.1 do PRD).</summary>
+    [HttpPost("aprovar/{id}")]
+    public async Task<ActionResult<SugestaoResponse>> Aprovar(int id)
     {
-        var currentUserId = CurrentUserId();
+        if (!IsAdmin())
+        {
+            return Ok(new SugestaoResponse(true, "Operação não permitida.", null));
+        }
 
-        var sugestao = await _db.Sugestoes
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var currentUserId = CurrentUserId();
+        var sugestao = await CarregarSugestaoAsync(id);
 
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new SugestaoResponse(true, "Sugestão não encontrada.", null));
         }
 
         if (sugestao.Status != StatusSugestao.EmModeracao)
         {
-            return Conflict("Sugestão já foi moderada.");
+            return Ok(new SugestaoResponse(true, "Sugestão já foi moderada.", null));
         }
 
         sugestao.Status = StatusSugestao.Publicada;
@@ -259,38 +216,34 @@ public class SugestoesController : ControllerBase
         sugestao.Moderador = await _db.Usuarios.FindAsync(sugestao.ModeradorId);
         await _notificacaoService.NotificarAsync(sugestao.Autor!, TipoNotificacao.SugestaoAprovada, sugestao);
 
-        return Ok(ToDto(sugestao, currentUserId));
+        return Ok(new SugestaoResponse(false, null, ToDto(sugestao, currentUserId)));
     }
 
-    /// <summary>
-    /// Rejeita uma sugestão em moderação, com justificativa (regra 7.1 do PRD).
-    /// </summary>
-    [HttpPut("{id}/rejeitar")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<ActionResult<SugestaoDto>> Rejeitar(int id, RejeitarSugestaoRequest request)
+    /// <summary>Rejeita uma sugestão em moderação, com justificativa (regra 7.1 do PRD).</summary>
+    [HttpPost("rejeitar/{id}")]
+    public async Task<ActionResult<SugestaoResponse>> Rejeitar(int id, RejeitarSugestaoRequest request)
     {
+        if (!IsAdmin())
+        {
+            return Ok(new SugestaoResponse(true, "Operação não permitida.", null));
+        }
+
         if (string.IsNullOrWhiteSpace(request.Motivo))
         {
-            return BadRequest("Motivo é obrigatório.");
+            return Ok(new SugestaoResponse(true, "Motivo é obrigatório.", null));
         }
 
         var currentUserId = CurrentUserId();
-
-        var sugestao = await _db.Sugestoes
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var sugestao = await CarregarSugestaoAsync(id);
 
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new SugestaoResponse(true, "Sugestão não encontrada.", null));
         }
 
         if (sugestao.Status != StatusSugestao.EmModeracao)
         {
-            return Conflict("Sugestão já foi moderada.");
+            return Ok(new SugestaoResponse(true, "Sugestão já foi moderada.", null));
         }
 
         sugestao.Status = StatusSugestao.Rejeitada;
@@ -303,35 +256,32 @@ public class SugestoesController : ControllerBase
         sugestao.Moderador = await _db.Usuarios.FindAsync(sugestao.ModeradorId);
         await _notificacaoService.NotificarAsync(sugestao.Autor!, TipoNotificacao.SugestaoRejeitada, sugestao);
 
-        return Ok(ToDto(sugestao, currentUserId));
+        return Ok(new SugestaoResponse(false, null, ToDto(sugestao, currentUserId)));
     }
 
     /// <summary>
-    /// Define o estágio de roadmap (Em análise/Planejado/Em desenvolvimento/Lançado) de uma sugestão
-    /// já publicada — status de andamento público (PRD, ponto em aberto #2). Notifica o autor por
-    /// e-mail só na transição pra "Lançado" (evita ruído a cada mudança de estágio intermediária).
+    /// Define o estágio de roadmap de uma sugestão já publicada (PRD, ponto em aberto #2). Notifica o
+    /// autor por e-mail só na transição pra "Lançado".
     /// </summary>
-    [HttpPut("{id}/roadmap")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<ActionResult<SugestaoDto>> AtualizarEstagioRoadmap(int id, AtualizarEstagioRoadmapRequest request)
+    [HttpPost("roadmap/{id}")]
+    public async Task<ActionResult<SugestaoResponse>> Roadmap(int id, AtualizarEstagioRoadmapRequest request)
     {
-        var currentUserId = CurrentUserId();
+        if (!IsAdmin())
+        {
+            return Ok(new SugestaoResponse(true, "Operação não permitida.", null));
+        }
 
-        var sugestao = await _db.Sugestoes
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var currentUserId = CurrentUserId();
+        var sugestao = await CarregarSugestaoAsync(id);
 
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new SugestaoResponse(true, "Sugestão não encontrada.", null));
         }
 
         if (sugestao.Status != StatusSugestao.Publicada)
         {
-            return Conflict("Só é possível definir o estágio de roadmap de sugestões publicadas.");
+            return Ok(new SugestaoResponse(true, "Só é possível definir o estágio de roadmap de sugestões publicadas.", null));
         }
 
         var estagioAnterior = sugestao.EstagioRoadmap;
@@ -343,92 +293,96 @@ public class SugestoesController : ControllerBase
             await _notificacaoService.NotificarAsync(sugestao.Autor!, TipoNotificacao.SugestaoLancada, sugestao);
         }
 
-        return Ok(ToDto(sugestao, currentUserId));
+        return Ok(new SugestaoResponse(false, null, ToDto(sugestao, currentUserId)));
     }
 
-    /// <summary>
-    /// Vota em uma sugestão publicada. Limite de 3 votos ativos por cliente, um voto por sugestão (regra 7.2 do PRD).
-    /// </summary>
-    [HttpPost("{id}/votos")]
-    [Authorize(Roles = nameof(RoleUsuario.Cliente))]
-    public async Task<ActionResult<SugestaoDto>> Votar(int id)
+    /// <summary>Vota em uma sugestão publicada. Limite de 3 votos ativos por cliente (regra 7.2 do PRD).</summary>
+    [HttpPost("votar/{id}")]
+    public async Task<ActionResult<SugestaoResponse>> Votar(int id)
     {
-        var currentUserId = CurrentUserId();
+        if (!IsCliente())
+        {
+            return Ok(new SugestaoResponse(true, "Operação não permitida.", null));
+        }
 
-        var sugestao = await _db.Sugestoes
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var currentUserId = CurrentUserId();
+        var sugestao = await CarregarSugestaoAsync(id);
 
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new SugestaoResponse(true, "Sugestão não encontrada.", null));
         }
 
         if (sugestao.Status != StatusSugestao.Publicada)
         {
-            return Conflict("Só é possível votar em sugestões publicadas.");
+            return Ok(new SugestaoResponse(true, "Só é possível votar em sugestões publicadas.", null));
         }
 
         if (sugestao.EstagioRoadmap == EstagioRoadmap.Lancado)
         {
-            return Conflict("Esta sugestão já foi lançada e não aceita mais votos.");
+            return Ok(new SugestaoResponse(true, "Esta sugestão já foi lançada e não aceita mais votos.", null));
         }
 
         if (sugestao.Votos.Any(v => v.UsuarioId == currentUserId))
         {
-            return Conflict("Você já votou nesta sugestão.");
+            return Ok(new SugestaoResponse(true, "Você já votou nesta sugestão.", null));
         }
 
         var votosAtivos = await _db.Votos.CountAsync(v => v.UsuarioId == currentUserId);
         if (votosAtivos >= LimiteVotosPorUsuario)
         {
-            return Conflict($"Limite de {LimiteVotosPorUsuario} votos ativos atingido. Remova um voto para votar em outra sugestão.");
+            return Ok(new SugestaoResponse(true, $"Limite de {LimiteVotosPorUsuario} votos ativos atingido. Remova um voto para votar em outra sugestão.", null));
         }
 
         sugestao.Votos.Add(new Voto { SugestaoId = sugestao.Id, UsuarioId = currentUserId });
         await _db.SaveChangesAsync();
 
-        return Ok(ToDto(sugestao, currentUserId));
+        return Ok(new SugestaoResponse(false, null, ToDto(sugestao, currentUserId)));
     }
 
-    /// <summary>
-    /// Remove o voto do usuário autenticado nesta sugestão — usado para realocar o voto para outra (regra 7.2 do PRD).
-    /// </summary>
-    [HttpDelete("{id}/votos")]
-    [Authorize(Roles = nameof(RoleUsuario.Cliente))]
-    public async Task<ActionResult<SugestaoDto>> RemoverVoto(int id)
+    /// <summary>Remove o voto do usuário autenticado nesta sugestão — usado para realocar o voto (regra 7.2 do PRD).</summary>
+    [HttpPost("removervoto/{id}")]
+    public async Task<ActionResult<SugestaoResponse>> RemoverVoto(int id)
     {
-        var currentUserId = CurrentUserId();
+        if (!IsCliente())
+        {
+            return Ok(new SugestaoResponse(true, "Operação não permitida.", null));
+        }
 
-        var sugestao = await _db.Sugestoes
-            .Include(s => s.Produto)
-            .Include(s => s.Categoria)
-            .Include(s => s.Autor)
-            .Include(s => s.Votos)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var currentUserId = CurrentUserId();
+        var sugestao = await CarregarSugestaoAsync(id);
 
         if (sugestao is null)
         {
-            return NotFound();
+            return Ok(new SugestaoResponse(true, "Sugestão não encontrada.", null));
         }
 
         var voto = sugestao.Votos.FirstOrDefault(v => v.UsuarioId == currentUserId);
         if (voto is null)
         {
-            return NotFound("Você não tem voto nesta sugestão.");
+            return Ok(new SugestaoResponse(true, "Você não tem voto nesta sugestão.", null));
         }
 
         sugestao.Votos.Remove(voto);
         _db.Votos.Remove(voto);
         await _db.SaveChangesAsync();
 
-        return Ok(ToDto(sugestao, currentUserId));
+        return Ok(new SugestaoResponse(false, null, ToDto(sugestao, currentUserId)));
     }
 
+    private async Task<Sugestao?> CarregarSugestaoAsync(int id) =>
+        await _db.Sugestoes
+            .Include(s => s.Produto)
+            .Include(s => s.Categoria)
+            .Include(s => s.Autor)
+            .Include(s => s.Votos)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
     private int CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    private bool IsAdmin() => User.IsInRole(nameof(RoleUsuario.AdminInterno));
+
+    private bool IsCliente() => User.IsInRole(nameof(RoleUsuario.Cliente));
 
     private static bool CamposObrigatoriosValidos(string titulo, string descricao, string resultadoEsperado) =>
         !string.IsNullOrWhiteSpace(titulo) && !string.IsNullOrWhiteSpace(descricao) && !string.IsNullOrWhiteSpace(resultadoEsperado);

@@ -12,9 +12,11 @@ public class CategoriasControllerTests
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.cat1@empresa.com", "Admin", "Empresa", "AdminInterno");
 
-        var response = await admin.PostAsJsonAsync("/api/categorias", new { nome = "Financeiro" });
+        var response = await admin.PostAsJsonAsync("/api/categorias/salvar", new { nome = "Financeiro" });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False(body.GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -23,9 +25,11 @@ public class CategoriasControllerTests
         await using var factory = new CustomWebApplicationFactory();
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.cat1@empresa.com", "Cliente", "Empresa", "Cliente");
 
-        var response = await cliente.PostAsJsonAsync("/api/categorias", new { nome = "Financeiro" });
+        var response = await cliente.PostAsJsonAsync("/api/categorias/salvar", new { nome = "Financeiro" });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(body.GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -35,21 +39,24 @@ public class CategoriasControllerTests
         var admin = await factory.CreateAuthenticatedClientAsync("admin.cat2@empresa.com", "Admin", "Empresa", "AdminInterno");
         await admin.CriarCategoriaAsync("Financeiro");
 
-        var response = await admin.GetAsync("/api/categorias");
-        var categorias = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var response = await admin.PostAsJsonAsync("/api/categorias/listar", new { });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var categorias = body.GetProperty("Categorias");
 
-        Assert.Contains(categorias.EnumerateArray(), c => c.GetProperty("nome").GetString() == "Financeiro");
+        Assert.Contains(categorias.EnumerateArray(), c => c.GetProperty("Nome").GetString() == "Financeiro");
     }
 
     [Fact]
-    public async Task Criar_NomeVazioDaBadRequest()
+    public async Task Salvar_NomeVazioDevolveErro()
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.cat3@empresa.com", "Admin", "Empresa", "AdminInterno");
 
-        var response = await admin.PostAsJsonAsync("/api/categorias", new { nome = "  " });
+        var response = await admin.PostAsJsonAsync("/api/categorias/salvar", new { nome = "  " });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(body.GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -59,11 +66,12 @@ public class CategoriasControllerTests
         var admin = await factory.CreateAuthenticatedClientAsync("admin.cat4@empresa.com", "Admin", "Empresa", "AdminInterno");
         var id = await admin.CriarCategoriaAsync("Nome Antigo");
 
-        var response = await admin.PutAsJsonAsync($"/api/categorias/{id}", new { nome = "Nome Novo" });
-        var dto = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var response = await admin.PostAsJsonAsync($"/api/categorias/editar/{id}", new { nome = "Nome Novo" });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("Nome Novo", dto.GetProperty("nome").GetString());
+        Assert.False(body.GetProperty("Erro").GetBoolean());
+        Assert.Equal("Nome Novo", body.GetProperty("Categoria").GetProperty("Nome").GetString());
     }
 
     [Fact]
@@ -74,11 +82,11 @@ public class CategoriasControllerTests
         var id = await admin.CriarCategoriaAsync("Financeiro");
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.cat5@empresa.com", "Cliente", "Empresa", "Cliente");
 
-        var respostaEditar = await cliente.PutAsJsonAsync($"/api/categorias/{id}", new { nome = "Hack" });
-        var respostaRemover = await cliente.DeleteAsync($"/api/categorias/{id}");
+        var respostaEditar = await cliente.PostAsJsonAsync($"/api/categorias/editar/{id}", new { nome = "Hack" });
+        var respostaRemover = await cliente.PostAsJsonAsync($"/api/categorias/remover/{id}", new { });
 
-        Assert.Equal(HttpStatusCode.Forbidden, respostaEditar.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, respostaRemover.StatusCode);
+        Assert.True((await respostaEditar.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
+        Assert.True((await respostaRemover.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -88,14 +96,17 @@ public class CategoriasControllerTests
         var admin = await factory.CreateAuthenticatedClientAsync("admin.cat6@empresa.com", "Admin", "Empresa", "AdminInterno");
         var id = await admin.CriarCategoriaAsync("Descontinuada");
 
-        var respostaRemover = await admin.DeleteAsync($"/api/categorias/{id}");
-        Assert.Equal(HttpStatusCode.NoContent, respostaRemover.StatusCode);
+        var respostaRemover = await admin.PostAsJsonAsync($"/api/categorias/remover/{id}", new { });
+        var corpoRemover = await respostaRemover.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(corpoRemover.GetProperty("Erro").GetBoolean());
 
-        var ativas = await (await admin.GetAsync("/api/categorias")).Content.ReadFromJsonAsync<JsonElement>();
-        Assert.DoesNotContain(ativas.EnumerateArray(), c => c.GetProperty("id").GetInt32() == id);
+        var ativas = (await (await admin.PostAsJsonAsync("/api/categorias/listar", new { })).Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("Categorias");
+        Assert.DoesNotContain(ativas.EnumerateArray(), c => c.GetProperty("Id").GetInt32() == id);
 
-        var todas = await (await admin.GetAsync("/api/categorias/todas")).Content.ReadFromJsonAsync<JsonElement>();
-        var categoria = todas.EnumerateArray().Single(c => c.GetProperty("id").GetInt32() == id);
-        Assert.False(categoria.GetProperty("ativo").GetBoolean());
+        var todas = (await (await admin.PostAsJsonAsync("/api/categorias/listartodas", new { })).Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("Categorias");
+        var categoria = todas.EnumerateArray().Single(c => c.GetProperty("Id").GetInt32() == id);
+        Assert.False(categoria.GetProperty("Ativo").GetBoolean());
     }
 }

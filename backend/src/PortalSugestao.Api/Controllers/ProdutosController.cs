@@ -20,11 +20,9 @@ public class ProdutosController : ControllerBase
         _db = db;
     }
 
-    /// <summary>
-    /// Lista produtos (ERPs) ativos — usado no seletor de produto ao criar/editar sugestão.
-    /// </summary>
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<ProdutoDto>>> Listar()
+    /// <summary>Lista produtos (ERPs) ativos — usado no seletor de produto ao criar/editar sugestão.</summary>
+    [HttpPost("listar")]
+    public async Task<ActionResult<ListarProdutosResponse>> Listar()
     {
         var produtos = await _db.Produtos
             .Where(p => p.Ativo)
@@ -32,81 +30,92 @@ public class ProdutosController : ControllerBase
             .Select(p => new ProdutoDto(p.Id, p.Nome, p.Ativo))
             .ToListAsync();
 
-        return Ok(produtos);
+        return Ok(new ListarProdutosResponse(false, null, produtos));
     }
 
-    /// <summary>
-    /// Lista todos os produtos, ativos e inativos — usado na tela de gestão de produtos (Admin).
-    /// </summary>
-    [HttpGet("todos")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<ActionResult<IEnumerable<ProdutoDto>>> ListarTodos()
+    /// <summary>Lista todos os produtos, ativos e inativos — tela de gestão de produtos (Admin).</summary>
+    [HttpPost("listartodos")]
+    public async Task<ActionResult<ListarProdutosResponse>> ListarTodos()
     {
+        if (!IsAdmin())
+        {
+            return Ok(new ListarProdutosResponse(true, "Operação não permitida.", null));
+        }
+
         var produtos = await _db.Produtos
             .OrderBy(p => p.Nome)
             .Select(p => new ProdutoDto(p.Id, p.Nome, p.Ativo))
             .ToListAsync();
 
-        return Ok(produtos);
+        return Ok(new ListarProdutosResponse(false, null, produtos));
     }
 
-    [HttpPost]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<ActionResult<ProdutoDto>> Criar(CreateProdutoRequest request)
+    [HttpPost("salvar")]
+    public async Task<ActionResult<ProdutoResponse>> Salvar(CreateProdutoRequest request)
     {
+        if (!IsAdmin())
+        {
+            return Ok(new ProdutoResponse(true, "Operação não permitida.", null));
+        }
+
         if (string.IsNullOrWhiteSpace(request.Nome))
         {
-            return BadRequest("Nome é obrigatório.");
+            return Ok(new ProdutoResponse(true, "Nome é obrigatório.", null));
         }
 
         var produto = new Produto { Nome = request.Nome, Ativo = true };
         _db.Produtos.Add(produto);
         await _db.SaveChangesAsync();
 
-        var dto = new ProdutoDto(produto.Id, produto.Nome, produto.Ativo);
-        return CreatedAtAction(nameof(Listar), dto);
+        return Ok(new ProdutoResponse(false, null, new ProdutoDto(produto.Id, produto.Nome, produto.Ativo)));
     }
 
-    /// <summary>
-    /// Renomeia um produto existente.
-    /// </summary>
-    [HttpPut("{id}")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<ActionResult<ProdutoDto>> Editar(int id, CreateProdutoRequest request)
+    /// <summary>Renomeia um produto existente.</summary>
+    [HttpPost("editar/{id}")]
+    public async Task<ActionResult<ProdutoResponse>> Editar(int id, CreateProdutoRequest request)
     {
+        if (!IsAdmin())
+        {
+            return Ok(new ProdutoResponse(true, "Operação não permitida.", null));
+        }
+
         if (string.IsNullOrWhiteSpace(request.Nome))
         {
-            return BadRequest("Nome é obrigatório.");
+            return Ok(new ProdutoResponse(true, "Nome é obrigatório.", null));
         }
 
         var produto = await _db.Produtos.FindAsync(id);
         if (produto is null)
         {
-            return NotFound();
+            return Ok(new ProdutoResponse(true, "Produto não encontrado.", null));
         }
 
         produto.Nome = request.Nome;
         await _db.SaveChangesAsync();
 
-        return Ok(new ProdutoDto(produto.Id, produto.Nome, produto.Ativo));
+        return Ok(new ProdutoResponse(false, null, new ProdutoDto(produto.Id, produto.Nome, produto.Ativo)));
     }
 
-    /// <summary>
-    /// Desativa um produto (exclusão lógica — a FK de Sugestao.ProdutoId impede exclusão física).
-    /// </summary>
-    [HttpDelete("{id}")]
-    [Authorize(Roles = nameof(RoleUsuario.AdminInterno))]
-    public async Task<IActionResult> Remover(int id)
+    /// <summary>Desativa um produto (exclusão lógica — a FK de Sugestao.ProdutoId impede exclusão física).</summary>
+    [HttpPost("remover/{id}")]
+    public async Task<ActionResult<ProdutoResponse>> Remover(int id)
     {
+        if (!IsAdmin())
+        {
+            return Ok(new ProdutoResponse(true, "Operação não permitida.", null));
+        }
+
         var produto = await _db.Produtos.FindAsync(id);
         if (produto is null)
         {
-            return NotFound();
+            return Ok(new ProdutoResponse(true, "Produto não encontrado.", null));
         }
 
         produto.Ativo = false;
         await _db.SaveChangesAsync();
 
-        return NoContent();
+        return Ok(new ProdutoResponse(false, null, null));
     }
+
+    private bool IsAdmin() => User.IsInRole(nameof(RoleUsuario.AdminInterno));
 }

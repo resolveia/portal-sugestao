@@ -12,9 +12,11 @@ public class ModeracaoControllerTests
         await using var factory = new CustomWebApplicationFactory();
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.mod1@empresa.com", "Cliente", "Empresa", "Cliente");
 
-        var response = await cliente.GetAsync("/api/sugestoes/pendentes");
+        var response = await cliente.PostAsJsonAsync("/api/sugestoes/pendentes", new { });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(body.GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -26,12 +28,13 @@ public class ModeracaoControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.mod2@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
 
-        var response = await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
-        var dto = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var response = await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var sugestao = body.GetProperty("Sugestao");
 
-        Assert.Equal("Publicada", dto.GetProperty("status").GetString());
-        Assert.Equal("Admin", dto.GetProperty("moderadorNome").GetString());
-        Assert.False(string.IsNullOrEmpty(dto.GetProperty("dataModeracao").GetString()));
+        Assert.Equal("Publicada", sugestao.GetProperty("Status").GetString());
+        Assert.Equal("Admin", sugestao.GetProperty("ModeradorNome").GetString());
+        Assert.False(string.IsNullOrEmpty(sugestao.GetProperty("DataModeracao").GetString()));
     }
 
     [Fact]
@@ -43,15 +46,16 @@ public class ModeracaoControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.mod3@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
 
-        var response = await admin.PutAsJsonAsync($"/api/sugestoes/{id}/rejeitar", new { motivo = "Duplicada" });
-        var dto = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var response = await admin.PostAsJsonAsync($"/api/sugestoes/rejeitar/{id}", new { motivo = "Duplicada" });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var sugestao = body.GetProperty("Sugestao");
 
-        Assert.Equal("Rejeitada", dto.GetProperty("status").GetString());
-        Assert.Equal("Duplicada", dto.GetProperty("motivoRejeicao").GetString());
+        Assert.Equal("Rejeitada", sugestao.GetProperty("Status").GetString());
+        Assert.Equal("Duplicada", sugestao.GetProperty("MotivoRejeicao").GetString());
     }
 
     [Fact]
-    public async Task ModerarDuasVezes_DaConflito()
+    public async Task ModerarDuasVezes_DevolveErro()
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.mod4@empresa.com", "Admin", "Empresa", "AdminInterno");
@@ -59,9 +63,10 @@ public class ModeracaoControllerTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.mod4@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
 
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
-        var segunda = await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
+        var segunda = await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
+        var body = await segunda.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(HttpStatusCode.Conflict, segunda.StatusCode);
+        Assert.True(body.GetProperty("Erro").GetBoolean());
     }
 }

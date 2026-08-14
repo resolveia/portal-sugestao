@@ -14,113 +14,69 @@ public class AuthController : ControllerBase
 {
     private readonly PortalSugestaoDbContext _db;
     private readonly MockTokenService _tokenService;
-    private readonly ErpTokenSimuladoService _erpTokenService;
     private readonly IWebHostEnvironment _env;
 
-    public AuthController(
-        PortalSugestaoDbContext db,
-        MockTokenService tokenService,
-        ErpTokenSimuladoService erpTokenService,
-        IWebHostEnvironment env)
+    public AuthController(PortalSugestaoDbContext db, MockTokenService tokenService, IWebHostEnvironment env)
     {
         _db = db;
         _tokenService = tokenService;
-        _erpTokenService = erpTokenService;
         _env = env;
     }
 
     /// <summary>
-    /// Login manual (formulário): recebe os dados básicos do usuário e devolve um JWT.
-    /// Continua existindo em paralelo ao login automático via token (rota "login-token") —
-    /// decisão do time do ERP (2026-08-12, ver docs/sso-checklist.md).
+    /// Estabelece a sessão local do Portal depois que o front já logou de verdade contra a
+    /// api_authentication (ver docs/autenticacao-e-api-portal-sugestoes.md) — o login em si não é
+    /// feito aqui. Nesta aplicação local o login é sempre considerado válido (decisão do usuário,
+    /// 2026-08-14): não há validação de credencial nem fidelidade ao schema real do cookie/JWT,
+    /// só criação/atualização do Usuario local e emissão do cookie de sessão que protege as
+    /// rotas Admin deste "dublê" de api_portal_sugestoes.
+    /// A api_portal_sugestoes real cria o usuário sozinha no primeiro login — aqui replicamos
+    /// esse comportamento localmente, com dados derivados quando a resposta da api_authentication
+    /// não os fornece (ela não devolve e-mail nem nome de empresa, só Login/EmpresaId).
     /// </summary>
-    [HttpPost("mock-login")]
-    public async Task<ActionResult<MockLoginResponse>> MockLogin(MockLoginRequest request)
+    [HttpPost("sessao")]
+    public async Task<ActionResult<SessaoResponse>> Sessao(SessaoRequest request)
     {
-        var usuario = await ObterOuCriarUsuarioAsync(
-            erpUserId: $"mock:{request.Email}",
-            nome: request.Nome,
-            email: request.Email,
-            empresa: request.Empresa,
-            role: request.Role);
+        var erpUserId = $"{request.EmpresaId}:{request.Id}";
+        var role = request.AdminPortalSugestoes ? RoleUsuario.AdminInterno : RoleUsuario.Cliente;
 
-        var (token, expiresAt) = _tokenService.GenerateToken(usuario);
-        DefinirCookieSessao(token, expiresAt);
-
-        return Ok(new MockLoginResponse(token, expiresAt, usuario.Id, usuario.Nome, usuario.Email, usuario.Role));
-    }
-
-    /// <summary>
-    /// Login automático via token (equivalente à rota que o ERP vai chamar passando "?token=..." —
-    /// ver docs/sso-checklist.md). O token hoje é simulado (<see cref="ErpTokenSimuladoService"/>);
-    /// será substituído pela decriptação real assim que o time do ERP definir o algoritmo/chave
-    /// (PRD, ponto em aberto #1). Sempre responde 200 OK — erro vem no campo "erro", conforme
-    /// padrão definido pelo time do ERP.
-    /// </summary>
-    [HttpPost("login-token")]
-    public async Task<ActionResult<LoginTokenResponse>> LoginToken(LoginTokenRequest request)
-    {
-        var payload = _erpTokenService.Decodificar(request.Token);
-        if (payload is null)
-        {
-            return Ok(new LoginTokenResponse(true, "Token inválido ou expirado.", null));
-        }
-
-        var usuario = await ObterOuCriarUsuarioAsync(
-            erpUserId: payload.ErpUserId,
-            nome: payload.Nome,
-            email: payload.Email,
-            empresa: payload.Empresa,
-            role: payload.Role);
-
-        var (token, expiresAt) = _tokenService.GenerateToken(usuario);
-        DefinirCookieSessao(token, expiresAt);
-
-        return Ok(new LoginTokenResponse(false, null, new UsuarioLogadoDto(usuario.Id, usuario.Nome, usuario.Email, usuario.Role)));
-    }
-
-    /// <summary>
-    /// Encerra a sessão: o cookie é HttpOnly, então só o backend consegue removê-lo de fato
-    /// (o front não tem acesso a ele via JS pra apagar sozinho).
-    /// </summary>
-    [HttpPost("logout")]
-    public IActionResult Logout()
-    {
-        Response.Cookies.Delete(AuthCookieDefaults.Name, new CookieOptions { Path = "/" });
-        return Ok();
-    }
-
-    /// <summary>
-    /// Gera tokens de demonstração (Admin e Cliente) só pra simular, em desenvolvimento, o link que
-    /// o ERP abriria com "?token=...". Remover quando o token real do ERP existir.
-    /// </summary>
-    [HttpGet("tokens-demo")]
-    public ActionResult<TokensDemoResponse> TokensDemo()
-    {
-        return Ok(new TokensDemoResponse(
-            Admin: _erpTokenService.GerarToken(ErpTokenSimuladoService.AdminDemo),
-            Cliente: _erpTokenService.GerarToken(ErpTokenSimuladoService.ClienteDemo)));
-    }
-
-    private async Task<Usuario> ObterOuCriarUsuarioAsync(string erpUserId, string nome, string email, string empresa, RoleUsuario role)
-    {
         var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.ErpUserId == erpUserId);
 
         if (usuario is null)
         {
             usuario = new Usuario
             {
-                Nome = nome,
-                Email = email,
-                Empresa = empresa,
+                Nome = request.Nome,
+                Email = $"{request.Login}@erp.local", // placeholder — api_authentication real não devolve e-mail
+                Empresa = request.EmpresaId, // placeholder — resposta de login não traz o nome da empresa
                 ErpUserId = erpUserId,
                 Role = role
             };
             _db.Usuarios.Add(usuario);
-            await _db.SaveChangesAsync();
+        }
+        else
+        {
+            usuario.Nome = request.Nome;
+            usuario.Role = role; // a role é devolvida a cada login (decisão do usuário, 2026-08-14)
         }
 
-        return usuario;
+        await _db.SaveChangesAsync();
+
+        var (token, expiresAt) = _tokenService.GenerateToken(usuario);
+        DefinirCookieSessao(token, expiresAt);
+
+        return Ok(new SessaoResponse(false, null, new UsuarioLogadoDto(usuario.Id, usuario.Nome, usuario.Email, usuario.Role)));
+    }
+
+    /// <summary>
+    /// Encerra a sessão local. Só o backend consegue apagar o cookie (HttpOnly, não acessível via JS).
+    /// Sem correspondência com a api_authentication real: lá, o logout é POST /api/authentication/logout.
+    /// </summary>
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete(AuthCookieDefaults.Name, new CookieOptions { Path = "/" });
+        return Ok(new LogoutResponse(false));
     }
 
     private void DefinirCookieSessao(string token, DateTime expiresAt)

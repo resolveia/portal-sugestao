@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -9,7 +8,7 @@ public class EstagioRoadmapTests
     private static async Task<int> CriarEPublicarAsync(HttpClient admin, HttpClient autor, int categoriaId, string titulo)
     {
         var id = await autor.CriarSugestaoAsync(categoriaId, titulo);
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
         return id;
     }
 
@@ -22,12 +21,12 @@ public class EstagioRoadmapTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.roadmap1@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await CriarEPublicarAsync(admin, cliente, categoriaId, "Sugestao roadmap 1");
 
-        var response = await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Planejado" });
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var response = await admin.PostAsJsonAsync($"/api/sugestoes/roadmap/{id}", new { estagio = "Planejado" });
+        Assert.False((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
 
-        var ranking = await (await cliente.GetAsync("/api/sugestoes")).Content.ReadFromJsonAsync<JsonElement>();
-        var item = ranking.GetProperty("items").EnumerateArray().First(s => s.GetProperty("id").GetInt32() == id);
-        Assert.Equal("Planejado", item.GetProperty("estagioRoadmap").GetString());
+        var ranking = await (await cliente.PostAsJsonAsync("/api/sugestoes/listar", new { Skip = 0, Take = 20 })).Content.ReadFromJsonAsync<JsonElement>();
+        var item = ranking.GetProperty("Sugestoes").EnumerateArray().First(s => s.GetProperty("Id").GetInt32() == id);
+        Assert.Equal("Planejado", item.GetProperty("EstagioRoadmap").GetString());
     }
 
     [Fact]
@@ -39,8 +38,8 @@ public class EstagioRoadmapTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.roadmap2@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await CriarEPublicarAsync(admin, cliente, categoriaId, "Sugestao roadmap 2");
 
-        var response = await cliente.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Planejado" });
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var response = await cliente.PostAsJsonAsync($"/api/sugestoes/roadmap/{id}", new { estagio = "Planejado" });
+        Assert.True((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
@@ -52,12 +51,12 @@ public class EstagioRoadmapTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.roadmap3@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId, "Sugestao roadmap 3 (nao publicada)");
 
-        var response = await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "EmAnalise" });
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var response = await admin.PostAsJsonAsync($"/api/sugestoes/roadmap/{id}", new { estagio = "EmAnalise" });
+        Assert.True((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 
     [Fact]
-    public async Task Votar_EmSugestaoLancada_DaConflito()
+    public async Task Votar_EmSugestaoLancada_DevolveErro()
     {
         await using var factory = new CustomWebApplicationFactory();
         var admin = await factory.CreateAuthenticatedClientAsync("admin.roadmap4@empresa.com", "Admin", "Empresa", "AdminInterno");
@@ -65,9 +64,9 @@ public class EstagioRoadmapTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.roadmap4@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await CriarEPublicarAsync(admin, cliente, categoriaId, "Sugestao roadmap 4");
 
-        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Lancado" });
+        await admin.PostAsJsonAsync($"/api/sugestoes/roadmap/{id}", new { estagio = "Lancado" });
 
-        var response = await cliente.PostAsync($"/api/sugestoes/{id}/votos", null);
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var response = await cliente.PostAsJsonAsync($"/api/sugestoes/votar/{id}", new { });
+        Assert.True((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("Erro").GetBoolean());
     }
 }

@@ -15,7 +15,7 @@ public class NotificacoesTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.notif1@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
 
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
 
         await using var db = factory.CreateDbContext();
         var existe = await db.NotificacaoLogs.AnyAsync(l => l.SugestaoId == id && l.Tipo == TipoNotificacao.SugestaoAprovada);
@@ -31,7 +31,7 @@ public class NotificacoesTests
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.notif2@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
 
-        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/rejeitar", new { motivo = "Duplicada" });
+        await admin.PostAsJsonAsync($"/api/sugestoes/rejeitar/{id}", new { motivo = "Duplicada" });
 
         await using var db = factory.CreateDbContext();
         var existe = await db.NotificacaoLogs.AnyAsync(l => l.SugestaoId == id && l.Tipo == TipoNotificacao.SugestaoRejeitada);
@@ -46,9 +46,9 @@ public class NotificacoesTests
         var categoriaId = await admin.CriarCategoriaAsync();
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.notif3@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
 
-        await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios", new { texto = "Comentario cliente" });
+        await cliente.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/salvar", new { texto = "Comentario cliente" });
 
         await using (var db = factory.CreateDbContext())
         {
@@ -56,7 +56,7 @@ public class NotificacoesTests
             Assert.Equal(0, count);
         }
 
-        await admin.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios", new { texto = "Comentario admin" });
+        await admin.PostAsJsonAsync($"/api/sugestoes/{id}/comentarios/salvar", new { texto = "Comentario admin" });
 
         await using (var db = factory.CreateDbContext())
         {
@@ -73,9 +73,9 @@ public class NotificacoesTests
         var categoriaId = await admin.CriarCategoriaAsync();
         var cliente = await factory.CreateAuthenticatedClientAsync("cliente.notif4@empresa.com", "Cliente", "Empresa", "Cliente");
         var id = await cliente.CriarSugestaoAsync(categoriaId);
-        await admin.PutAsync($"/api/sugestoes/{id}/aprovar", null);
+        await admin.PostAsJsonAsync($"/api/sugestoes/aprovar/{id}", new { });
 
-        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Planejado" });
+        await admin.PostAsJsonAsync($"/api/sugestoes/roadmap/{id}", new { estagio = "Planejado" });
 
         await using (var db = factory.CreateDbContext())
         {
@@ -83,8 +83,8 @@ public class NotificacoesTests
             Assert.Equal(0, count);
         }
 
-        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Lancado" });
-        await admin.PutAsJsonAsync($"/api/sugestoes/{id}/roadmap", new { estagio = "Lancado" });
+        await admin.PostAsJsonAsync($"/api/sugestoes/roadmap/{id}", new { estagio = "Lancado" });
+        await admin.PostAsJsonAsync($"/api/sugestoes/roadmap/{id}", new { estagio = "Lancado" });
 
         await using (var db = factory.CreateDbContext())
         {

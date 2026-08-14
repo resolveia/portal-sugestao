@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { adminGuard } from './admin.guard';
 import { AuthService } from './auth.service';
-import { MockLoginResponse } from '../models/usuario.model';
+import { UsuarioLogado } from '../models/usuario.model';
 
 describe('adminGuard', () => {
   let usuario: ReturnType<typeof vi.fn>;
@@ -25,14 +25,14 @@ describe('adminGuard', () => {
   }
 
   it('libera quando o usuário é AdminInterno', () => {
-    usuario.mockReturnValue({ role: 'AdminInterno' } as MockLoginResponse);
+    usuario.mockReturnValue({ role: 'AdminInterno' } as UsuarioLogado);
 
     expect(runGuard()).toBe(true);
     expect(navigate).not.toHaveBeenCalled();
   });
 
   it('bloqueia e redireciona para /sugestoes quando o usuário é Cliente', () => {
-    usuario.mockReturnValue({ role: 'Cliente' } as MockLoginResponse);
+    usuario.mockReturnValue({ role: 'Cliente' } as UsuarioLogado);
 
     expect(runGuard()).toBe(false);
     expect(navigate).toHaveBeenCalledWith(['/sugestoes']);
