@@ -1,219 +1,193 @@
-# Contrato de API — Fase 0/1/2/3/4
+# Contrato de API — api_portal_sugestoes
 
-Endpoints implementados no scaffolding inicial do backend (`backend/src/PortalSugestao.Api`). O contrato completo e sempre atualizado também pode ser consultado via Swagger em `/swagger` com a API rodando.
+Endpoints do backend (`backend/src/PortalSugestao.Api`). O contrato completo e sempre atualizado
+também pode ser consultado via Swagger em `/swagger` com a API rodando.
 
-> **Nota**: a autenticação abaixo é um **mock temporário** que simula o token de SSO do ERP. O mecanismo real depende de definição do time técnico do ERP (PRD, seção 12, ponto em aberto #1) e substituirá este endpoint futuramente.
+> **Convenção da plataforma** (revisão de 2026-08-14, alinhada ao padrão real de
+> `api_authentication`/`api_portal_sugestoes` — ver `docs/erp-auth-simulador.md`): **todos os
+> endpoints são `POST`**, mesmo os de leitura. A resposta é **sempre `HTTP 200`** com um envelope
+> `{ "Erro": bool, "Mensagem": string | null, ...dados }` — erro de negócio, validação ou
+> permissão vem com `Erro: true` e a mensagem no campo `Mensagem`, não em status HTTP. Só falha
+> técnica (não autenticado) usa status HTTP real (`401`). O JSON é **PascalCase**, igual aos nomes
+> das propriedades em C#.
+>
+> Autenticação: cookie HttpOnly de sessão (`portal_sugestao_session`), emitido por
+> `POST /api/auth/sessao` depois de login bem-sucedido contra a `api_authentication` do ERP (real
+> ou seu simulador local, `backend/tools/ErpAuthSimulado`). Ver PRD, seção 12, ponto em aberto #1.
 
 ## Autenticação
 
-### `POST /api/auth/mock-login`
-Simula o login via SSO do ERP. Cria o usuário no primeiro acesso (upsert por e-mail).
+### `POST /api/auth/sessao`
+Estabelece a sessão local do Portal a partir dos dados já autenticados pela `api_authentication`
+(quem valida usuário/senha é ela, não esta API). Cria o `Usuario` local no primeiro login ou
+atualiza nome/role nos seguintes (upsert por `EmpresaId:Id`).
 
 **Request**
 ```json
-{
-  "email": "cliente@empresa.com",
-  "nome": "Nome do Cliente",
-  "empresa": "Empresa Exemplo Ltda",
-  "role": "Cliente"
-}
+{ "Nome": "Cliente Teste", "Login": "cliente.teste", "Id": 1, "EmpresaId": "EMP1", "AdminPortalSugestoes": false }
 ```
-`role`: `"Cliente"` ou `"AdminInterno"`.
 
 **Response `200 OK`**
 ```json
-{
-  "token": "<jwt>",
-  "expiresAt": "2026-07-29T04:00:00Z",
-  "usuarioId": 1,
-  "nome": "Nome do Cliente",
-  "email": "cliente@empresa.com",
-  "role": "Cliente"
-}
+{ "Erro": false, "Mensagem": null, "Usuario": { "Id": 1, "Nome": "Cliente Teste", "Email": "cliente.teste@erp.local", "Role": "Cliente" } }
 ```
 
-Use o `token` retornado no header `Authorization: Bearer <token>` das demais chamadas.
+### `POST /api/auth/logout`
+Limpa o cookie de sessão (só o backend consegue, por ser HttpOnly).
+
+**Response `200 OK`**: `{ "Erro": false }`
 
 ## Categorias
 
-### `GET /api/categorias`
-Lista categorias **ativas**. Requer autenticação (qualquer role). Usado no seletor de categoria ao criar/editar sugestão.
+> Autenticado (qualquer role) pra leitura; `listartodas`/`salvar`/`editar`/`remover` exigem
+> `AdminInterno` — checado dentro da ação, devolvendo `{ Erro: true, Mensagem: "Operação não
+> permitida." }` em vez de `403`.
 
-### `GET /api/categorias/todas`
-Lista todas as categorias, ativas e inativas. Requer role `AdminInterno` — usado na tela de gestão de categorias.
+### `POST /api/categorias/listar`
+Lista categorias **ativas**. Usado no seletor de categoria ao criar/editar sugestão.
 
-### `POST /api/categorias`
-Cria uma categoria. Requer role `AdminInterno`.
+**Response**: `{ "Erro": false, "Mensagem": null, "Categorias": [ { "Id": 1, "Nome": "Financeiro", "Ativo": true } ] }`
 
-**Request**
-```json
-{ "nome": "Financeiro" }
-```
-**Respostas de erro**: `400` (nome vazio).
+### `POST /api/categorias/listartodas`
+Lista todas as categorias, ativas e inativas — tela de gestão de categorias (Admin).
 
-### `PUT /api/categorias/{id}`
-Renomeia uma categoria. Requer role `AdminInterno`. Mesmo corpo do `POST`.
+### `POST /api/categorias/salvar`
+Cria uma categoria. **Request**: `{ "Nome": "Financeiro" }`. **Response**: `{ Erro, Mensagem, Categoria }`.
+`Erro: true` se nome vazio.
 
-**Respostas de erro**: `400` (nome vazio), `404` (não existe).
+### `POST /api/categorias/editar/{id}`
+Renomeia uma categoria. Mesmo corpo do `salvar`. `Erro: true` se nome vazio ou categoria não existe.
 
-### `DELETE /api/categorias/{id}`
-"Exclui" uma categoria — na prática, **desativa** (`ativo = false`), já que sugestões existentes referenciam a categoria (FK `Restrict`). Requer role `AdminInterno`. Retorna `204`.
-
-**Respostas de erro**: `404` (não existe).
+### `POST /api/categorias/remover/{id}`
+"Exclui" uma categoria — na prática, **desativa** (`Ativo = false`), já que sugestões existentes
+referenciam a categoria (FK `Restrict`). `Erro: true` se não existe.
 
 ## Produtos
 
-Lista de ERPs comercializados pela empresa (hoje `AJORS.OOH` e `AJORS.SIGN`, semeados via migration). Endpoints idênticos aos de Categorias.
-
-### `GET /api/produtos`
-Lista produtos **ativos**. Requer autenticação (qualquer role). Usado no seletor de produto ao criar/editar sugestão.
-
-### `GET /api/produtos/todos`
-Lista todos os produtos, ativos e inativos. Requer role `AdminInterno` — usado na tela de gestão de produtos.
-
-### `POST /api/produtos`
-Cria um produto. Requer role `AdminInterno`.
-
-**Request**
-```json
-{ "nome": "AJORS.OOH" }
-```
-**Respostas de erro**: `400` (nome vazio).
-
-### `PUT /api/produtos/{id}`
-Renomeia um produto. Requer role `AdminInterno`. Mesmo corpo do `POST`.
-
-**Respostas de erro**: `400` (nome vazio), `404` (não existe).
-
-### `DELETE /api/produtos/{id}`
-"Exclui" um produto — na prática, **desativa** (`ativo = false`), já que sugestões existentes referenciam o produto (FK `Restrict`). Requer role `AdminInterno`. Retorna `204`.
-
-**Respostas de erro**: `404` (não existe).
+Lista de ERPs comercializados pela empresa (ex.: `AJORS.OOH`, `AJORS.SIGN`). Endpoints idênticos
+aos de Categorias, trocando `categorias` por `produtos` e `Categoria(s)` por `Produto(s)`:
+`listar`, `listartodos`, `salvar`, `editar/{id}`, `remover/{id}`.
 
 ## Sugestões
 
-### `GET /api/sugestoes?skip=0&take=20`
-Lista sugestões **publicadas**, ordenadas por total de votos (ranking). Requer autenticação. **Paginado no servidor** (RNF seção 11 — ver `docs/performance-report.md`): `skip` (padrão `0`) e `take` (padrão `20`, máximo `100`) são opcionais.
+### `POST /api/sugestoes/listar`
+Lista sugestões **publicadas**, ordenadas por total de votos (ranking). **Paginado no servidor**
+(RNF seção 11 — ver `docs/performance-report.md`).
+
+**Request**: `{ "Skip": 0, "Take": 20 }` (ambos opcionais; `Take` máximo 100)
 
 **Response**
 ```json
 {
-  "items": [ /* SugestaoDto[] da página atual */ ],
-  "total": 137,
-  "votosUsadosPeloUsuarioAtual": 2
+  "Erro": false,
+  "Mensagem": null,
+  "Sugestoes": [ /* SugestaoDto[] da página atual, ver formato abaixo */ ],
+  "Total": 137,
+  "VotosUsadosPeloUsuarioAtual": 2
 }
 ```
-`votosUsadosPeloUsuarioAtual` é o total de votos ativos do usuário autenticado (regra 7.2) — vem à parte porque o limite de 3 é sobre o total, não sobre a página atual, então o frontend não pode mais somar `votadoPorMim` só dos itens carregados.
+`VotosUsadosPeloUsuarioAtual` é o total de votos ativos do usuário autenticado (regra 7.2) — vem à
+parte porque o limite de 3 é sobre o total, não sobre a página atual.
 
-### `POST /api/sugestoes`
-Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1 do PRD). Requer autenticação. `produtoId`, `titulo`, `descricao`, `resultadoEsperado` e `categoriaId` são obrigatórios.
+**`SugestaoDto`**: `Id, Titulo, Descricao, ResultadoEsperado, ProdutoId, ProdutoNome, CategoriaId,
+CategoriaNome, AutorId, AutorNome, Status, EstagioRoadmap (nullable), DataCriacao, TotalVotos,
+VotadoPorMim, DataModeracao (nullable), MotivoRejeicao (nullable), ModeradorNome (nullable)`.
+
+### `POST /api/sugestoes/salvar`
+Cria uma nova sugestão com status inicial `EmModeracao` (regra 7.1).
 
 **Request**
 ```json
 {
-  "produtoId": 1,
-  "titulo": "Exportar relatório em Excel",
-  "descricao": "Permitir exportar o relatório X para .xlsx",
-  "resultadoEsperado": "Conseguir baixar o relatório em .xlsx direto da tela de relatórios",
-  "categoriaId": 1
+  "ProdutoId": 1,
+  "Titulo": "Exportar relatório em Excel",
+  "Descricao": "Permitir exportar o relatório X para .xlsx",
+  "ResultadoEsperado": "Conseguir baixar o relatório em .xlsx direto da tela de relatórios",
+  "CategoriaId": 1
 }
 ```
-**Respostas de erro**: `400` (algum campo obrigatório vazio, produto inválido ou categoria inválida).
+`Erro: true` se algum campo obrigatório vazio, produto inválido ou categoria inválida.
 
-### `PUT /api/sugestoes/{id}`
-Edita a própria sugestão, permitido apenas enquanto `status` for `EmModeracao` (regra 7.1). Requer ser o autor.
-
-**Request**: mesmo formato do `POST /api/sugestoes`.
-
-**Respostas de erro**: `403` (não é o autor), `404` (não existe), `409` (já foi moderada).
+### `POST /api/sugestoes/editar/{id}`
+Edita a própria sugestão, permitido apenas enquanto `Status` for `EmModeracao` (regra 7.1). Mesmo
+corpo do `salvar`. `Erro: true` se não é o autor, não existe ou já foi moderada.
 
 ## Moderação
 
-> Requerem role `AdminInterno`.
+> `Erro: true` com "Operação não permitida." se o usuário não for `AdminInterno`.
 
-### `GET /api/sugestoes/pendentes`
-Lista sugestões com `status = EmModeracao`, ordenadas da mais antiga para a mais nova (fila de moderação).
+### `POST /api/sugestoes/pendentes`
+Lista sugestões com `Status = EmModeracao`, da mais antiga para a mais nova.
 
-### `PUT /api/sugestoes/{id}/aprovar`
-Aprova a sugestão (`status` → `Publicada`), registra `dataModeracao` e o moderador responsável (auditoria — RNF seção 11).
+### `POST /api/sugestoes/aprovar/{id}`
+Aprova a sugestão (`Status` → `Publicada`), registra `DataModeracao` e o moderador responsável.
+`Erro: true` se não existe ou já foi moderada.
 
-**Respostas de erro**: `404` (não existe), `409` (já foi moderada).
-
-### `PUT /api/sugestoes/{id}/rejeitar`
-Rejeita a sugestão (`status` → `Rejeitada`), com justificativa.
-
-**Request**
-```json
-{ "motivo": "Duplicada da sugestão #12" }
-```
-
-**Respostas de erro**: `400` (motivo vazio), `404` (não existe), `409` (já foi moderada).
+### `POST /api/sugestoes/rejeitar/{id}`
+Rejeita a sugestão (`Status` → `Rejeitada`), com justificativa.
+**Request**: `{ "Motivo": "Duplicada da sugestão #12" }`.
+`Erro: true` se motivo vazio, não existe ou já foi moderada.
 
 ## Roadmap
 
-> Requer role `AdminInterno`.
+### `POST /api/sugestoes/roadmap/{id}`
+Define o estágio de roadmap (status de andamento público — PRD, ponto em aberto #2) de uma
+sugestão já publicada. Só `AdminInterno`. Notifica o autor por e-mail só na transição pra
+`Lancado`.
 
-### `PUT /api/sugestoes/{id}/roadmap`
-Define o estágio de roadmap (status de andamento público — PRD, ponto em aberto #2) de uma sugestão já publicada. Notifica o autor por e-mail só na transição pra `Lancado` (não a cada mudança de estágio intermediária).
+**Request**: `{ "Estagio": "Planejado" }` — valores: `EmAnalise`, `Planejado`, `EmDesenvolvimento`, `Lancado`.
+`Erro: true` se não existe ou sugestão ainda não publicada.
 
-**Request**
-```json
-{ "estagio": "Planejado" }
-```
-Valores possíveis: `EmAnalise`, `Planejado`, `EmDesenvolvimento`, `Lancado`.
-
-**Respostas de erro**: `404` (não existe), `409` (sugestão ainda não publicada).
-
-> `estagioRoadmap` aparece em toda resposta de `SugestaoDto` (nullable — `null` até o Admin definir o primeiro estágio). Sugestões com `estagioRoadmap = Lancado` não aceitam mais votos (`409` em `POST /api/sugestoes/{id}/votos` — regra 7.2, "sugestões publicadas e ainda não construídas/lançadas").
+> Sugestões com `EstagioRoadmap = Lancado` não aceitam mais votos (regra 7.2).
 
 ## Votação
 
-> Requerem role `Cliente` (Admin interno não vota — PRD seção 6).
+> Só `Cliente` (Admin interno não vota — PRD seção 6). `Erro: true` com "Operação não permitida."
+> caso contrário.
 
-### `POST /api/sugestoes/{id}/votos`
-Vota na sugestão (deve estar `Publicada`). Limite de **3 votos ativos simultâneos** por cliente, um voto por sugestão (regra 7.2).
+### `POST /api/sugestoes/votar/{id}`
+Vota na sugestão (deve estar `Publicada`). Limite de **3 votos ativos simultâneos** por cliente,
+um voto por sugestão (regra 7.2). `Erro: true` se não existe, não publicada, já lançada, já votou
+nela ou limite de 3 atingido.
 
-**Respostas de erro**: `404` (não existe), `409` (não publicada / já lançada / já votou nela / limite de 3 votos atingido).
+### `POST /api/sugestoes/removervoto/{id}`
+Remove o voto do usuário autenticado nessa sugestão — é assim que se faz a **realocação**: remover
+de uma e depois votar em outra. `Erro: true` se sugestão não existe ou usuário não tinha voto nela.
 
-### `DELETE /api/sugestoes/{id}/votos`
-Remove o voto do usuário autenticado nessa sugestão — é assim que se faz a **realocação**: remover de uma e depois `POST` em outra.
-
-**Respostas de erro**: `404` (sugestão não existe, ou usuário não tinha voto nela).
-
-> Todas as respostas de `SugestaoDto` (listagem, criação, edição, moderação, voto) incluem `votadoPorMim: bool`, indicando se o usuário autenticado já votou naquela sugestão. O total de votos usados pelo usuário (pro limite de 3) vem em `votosUsadosPeloUsuarioAtual`, na resposta paginada de `GET /api/sugestoes`.
+> Todas as respostas com `Sugestao` incluem `VotadoPorMim: bool`. O total de votos usados pelo
+> usuário (pro limite de 3) vem em `VotosUsadosPeloUsuarioAtual`, na resposta de `sugestoes/listar`.
 
 ## Comentários
 
-> Disponíveis apenas em sugestões **publicadas** (regra 7.3).
+> Disponíveis apenas em sugestões **publicadas** (regra 7.3). Rota aninhada em
+> `/api/sugestoes/{sugestaoId}/comentarios`.
 
-### `GET /api/sugestoes/{id}/comentarios`
-Lista a thread de comentários da sugestão, ordenada da mais antiga para a mais nova. Requer autenticação (Cliente ou Admin).
+### `POST /api/sugestoes/{sugestaoId}/comentarios/listar`
+Lista a thread de comentários, da mais antiga para a mais nova. `Erro: true` se sugestão não
+existe ou não publicada.
 
-**Respostas de erro**: `404` (sugestão não existe), `409` (sugestão não publicada).
-
-### `POST /api/sugestoes/{id}/comentarios`
+### `POST /api/sugestoes/{sugestaoId}/comentarios/salvar`
 Cria um comentário. Cliente e Admin podem comentar (tabela de permissões, seção 6).
+**Request**: `{ "Texto": "Ótima ideia, também preciso disso!" }`.
+`Erro: true` se texto vazio, sugestão não existe ou não publicada.
 
-**Request**
-```json
-{ "texto": "Ótima ideia, também preciso disso!" }
-```
-
-**Respostas de erro**: `400` (texto vazio), `404` (não existe), `409` (não publicada).
-
-### `DELETE /api/sugestoes/{id}/comentarios/{comentarioId}`
-Remove um comentário — **moderação reativa, só `AdminInterno`** (tabela de permissões, seção 6).
-
-**Respostas de erro**: `403` (não é Admin), `404` (comentário não existe).
+### `POST /api/sugestoes/{sugestaoId}/comentarios/remover/{comentarioId}`
+Remove um comentário — **moderação reativa, só `AdminInterno`**. `Erro: true` se não é Admin ou
+comentário não existe.
 
 ## Notificações
 
-Não são endpoints HTTP — são **efeitos colaterais** de ações já existentes (regra 7.5 do PRD). O autor da sugestão recebe um e-mail quando:
+Não são endpoints HTTP — são **efeitos colaterais** de ações já existentes (regra 7.5 do PRD). O
+autor da sugestão recebe um e-mail quando:
 
-- a sugestão é **aprovada** (`PUT /api/sugestoes/{id}/aprovar`);
-- a sugestão é **rejeitada** (`PUT /api/sugestoes/{id}/rejeitar`), com o motivo no corpo do e-mail;
-- **o Admin** comenta na sugestão (`POST /api/sugestoes/{id}/comentarios`) — comentários de outros clientes **não** geram e-mail, para evitar excesso de notificações (PRD, ponto em aberto #3).
+- a sugestão é **aprovada** (`sugestoes/aprovar/{id}`);
+- a sugestão é **rejeitada** (`sugestoes/rejeitar/{id}`), com o motivo no corpo do e-mail;
+- a sugestão é **lançada** (`sugestoes/roadmap/{id}`, transição pra `Lancado`);
+- **o Admin** comenta na sugestão (`comentarios/salvar`) — comentários de outros clientes **não**
+  geram e-mail, para evitar excesso de notificações (PRD, ponto em aberto #3).
 
-Cada envio também é registrado em `NotificacaoLog` (auditoria). Se o envio de e-mail falhar (ex.: SMTP fora do ar), a ação principal (aprovar/rejeitar/comentar) **continua funcionando normalmente** — a falha só é logada.
+Cada envio também é registrado em `NotificacaoLog` (auditoria). Se o envio de e-mail falhar (ex.:
+SMTP fora do ar), a ação principal **continua funcionando normalmente** — a falha só é logada.
 
-Em desenvolvimento, os e-mails vão para um SMTP de teste local (MailHog, subido via `docker-compose.yml`). Veja os e-mails recebidos em `http://localhost:8025`.
+Em desenvolvimento, os e-mails vão para um SMTP de teste local (MailHog, subido via
+`docker-compose.yml`). Veja os e-mails recebidos em `http://localhost:8025`.
